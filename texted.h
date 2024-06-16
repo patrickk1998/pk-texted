@@ -17,9 +17,15 @@ struct line_list{
 
 int create_line_list(char*, struct line_list*);
 
+void proccess_rbuffer(char *, int, struct line_list*);
+
+void merge_lists(struct line_list*, struct line_list*);
+
 struct line_item* new_line(int);
 
 void add_line(struct line_list*, struct line_item*, int);
+
+void remove_line(struct line_list*, int);
 
 void traverse_list(struct line_list*, int (*callback)(struct line_item*, long), long);
 

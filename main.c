@@ -4,7 +4,7 @@
 
 int callback(struct line_item *item, long data)
 {
-	printf("the line is %s, no. %d\n", item->text, *(int*)data);	
+	printf("%d\t %s\n", *(int*)data, item->text);	
 	(*(int*)data)++;
 	return 1;
 }
@@ -24,8 +24,8 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	int no = 1;	
-	traverse_list(&llist, &callback, (long)&no);
+	int num = 1;	
+	traverse_list(&llist, &callback, (long)&num);
 
 	printf("Opened %s\n", file_name);
 	cleanup(fd);
