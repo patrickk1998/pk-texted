@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS= -Wall
+CFLAGS= -Wall -g
 
 texted: texted.o main.o 
 	$(CC) $(CFLAGS) -o texted texted.o main.o
