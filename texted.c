@@ -1,11 +1,14 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "texted.h"
+
+char to_debug = 0;
 
 int create_line_list(char *filename, struct line_list *list)
 {
@@ -34,16 +37,19 @@ void proccess_rbuffer(char *rb, int len, struct line_list *list)
 	int offset = 0;
 	int start = 0;
 	struct line_item* cur;
-	printf("len %d\n", len);
+	if(to_debug)
+		printf("len %d\n", len);
 	while((offset + start) < len){
+		// A more complicated width calculation is needed here, for utf-8 endcoding and software tabs.
 		for(;rb[offset+start] != '\n' && (offset+start < len) && offset < list->width; offset++){
 
 		}
 		cur = new_line(list->width);
 		strncpy(cur->text, rb+start, offset);
-		printf("added: %s\n", cur->text);
+		if(to_debug)
+			printf("added: %s\n", cur->text);
 		add_line(list, cur, list->lines);
-		// assume all the lines are less than the width.
+		// For now assume all the lines are less than the width.
 		start = start + offset+1;
 		offset = 0;
 	}
@@ -131,6 +137,20 @@ void traverse_list(struct line_list *list, int (*callback)(struct line_item*, lo
 	struct line_item *curr = list->head;
 	while((*callback)(curr, data) && curr != list->end)
 		curr = curr->next;
+}
+
+void read_envs()
+{
+	char *env_debug = getenv("TXED_DEBUG");
+	if(env_debug == NULL)
+		return;
+	for(int i = 0; env_debug[i] != '\0'; i++){
+		env_debug[i] = toupper(env_debug[i]);
+	}
+
+	if(!(strcmp(env_debug,"TRUE")))
+		to_debug = 1;
+
 }
 
 void cleanup(int fd)

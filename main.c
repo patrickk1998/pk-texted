@@ -2,7 +2,7 @@
 #include "texted.h"
 
 
-int callback(struct line_item *item, long data)
+static int callback(struct line_item *item, long data)
 {
 	printf("%d\t %s\n", *(int*)data, item->text);	
 	(*(int*)data)++;
@@ -11,6 +11,7 @@ int callback(struct line_item *item, long data)
 
 int main(int argc, char* argv[])
 {
+	read_envs();
 	char default_file_name[] = "text/example1";
 	char *file_name;
 	if(argc < 2)

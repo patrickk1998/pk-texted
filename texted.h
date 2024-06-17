@@ -3,6 +3,8 @@
 
 #define RBUFFER_SIZE 256
 
+extern char to_debug;
+
 struct line_item{
 	struct line_item *next, *prev;
 	char flag; // used to store size of text, and if line is full or not.
@@ -28,6 +30,8 @@ void add_line(struct line_list*, struct line_item*, int);
 void remove_line(struct line_list*, int);
 
 void traverse_list(struct line_list*, int (*callback)(struct line_item*, long), long);
+
+void read_envs();
 
 void cleanup(int);
 
