@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <assert.h>
 #include <unistd.h>
 #include <ctype.h>
 #include <fcntl.h>
@@ -99,8 +100,7 @@ void add_line(struct line_list *list, struct line_item *new_line, int pos)
 		list->end = new_line;
 	}	
 	
-	if(pos < 0 || pos > list->lines)
-		return;	
+	assert(pos >= 0 && pos <= list->lines);
 
 	if(pos == 0){
 		new_line->next = list->head;	
@@ -134,6 +134,7 @@ void add_line(struct line_list *list, struct line_item *new_line, int pos)
 
 void traverse_list(struct line_list *list, int (*callback)(struct line_item*, long), long data)
 {
+	assert(callback);
 	struct line_item *curr = list->head;
 	while((*callback)(curr, data) && curr != list->end)
 		curr = curr->next;
