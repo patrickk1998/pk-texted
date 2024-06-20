@@ -44,8 +44,9 @@ int main(int argc, char* argv[])
 	int num = 1;
 	traverse_list(&llist, &display_callback, (long)&num);
 
-	after_display();
-
+	while(1){
+		after_display();
+	}
 /*
 	int num = 1;	
 	traverse_list(&llist, &callback, (long)&num);

@@ -60,6 +60,20 @@ void move_cursor(int, int);
 
 void write_line(char*, int);
 
+/* INPUT FUNCTIONS */
+
+// Seperate keyboard input from user actions.
+enum inputAction{
+	noop,
+	quit,
+	up,
+	down,
+	left,
+	right
+};
+
+enum inputAction escape_handle();
+
 #endif /* TEXTED_H */
 
 

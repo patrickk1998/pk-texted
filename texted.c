@@ -190,10 +190,23 @@ void enable_raw()
 void after_display()
 {
 	char b;
+	enum inputAction action = noop;
 	while( read(STDIN_FILENO, &b, 1) ){
-		if(b == ('q' & 0x1f))
-			exit(0);
-	} 
+		if(b == ('q' & 0x1f)){
+			action = quit;
+			break;
+		}
+		if(b == '\033'){
+			action = escape_handle();
+			break;
+		}
+	}
+
+	if(to_debug)
+		dprintf(STDERR_FILENO,"Action is %d\n", action);
+
+	if(action == quit) 
+		exit(0);
 
 	return;
 }
@@ -219,9 +232,33 @@ void move_cursor(int row, int col)
 void write_line(char *line, int row)
 {
 	move_cursor(row,0);
-	for(int i = 0; line[i] != '\0'; i++){
-		// This is bad, need a buffer.
-		write(STDOUT_FILENO, line+i, 1);
-	}
+	int i = 0;
+	for(; line[i] != '\0'; i++);
+	write(STDOUT_FILENO, line, i);
+
 }
 
+
+enum inputAction escape_handle()
+{
+	enum inputAction action = noop;
+	char buf[4]; 
+	read(STDIN_FILENO, buf, 3);
+	if(!strncmp(buf,"[A",2)){
+		action = up;
+		goto end;
+	}
+	if(!strncmp(buf,"[B",2)){
+		action = down;
+		goto end;
+	}
+	if(!strncmp(buf,"[C",2)){
+		action = right;
+		goto end;
+	}
+	if(!strncmp(buf,"[D",2))
+		action = left;
+
+end:
+	return action;
+}
