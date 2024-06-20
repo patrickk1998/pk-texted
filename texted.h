@@ -1,3 +1,6 @@
+#include <termios.h>
+#include <unistd.h>
+
 #ifndef TEXTED_H
 #define TEXTED_H
 
@@ -34,6 +37,28 @@ void traverse_list(struct line_list*, int (*callback)(struct line_item*, long), 
 void read_envs();
 
 void cleanup(int);
+
+/* DISPLAY FUNCTIONS */
+
+#define HIDE_CURSOR() write(STDOUT_FILENO,"\e[?25l",6)
+#define SHOW_CURSOR() write(STDOUT_FILENO,"\e[?25h",6)
+#define CLEAR_SCREEN() write(STDOUT_FILENO,"\e[2J",4)
+#define ALT_BUFFER() write(STDOUT_FILENO,"\e[?1049h",8);
+
+extern struct termios termset_orig;
+
+void disable_raw();
+
+void enable_raw();
+
+// event loop, read from input and update data; return after that.
+void after_display();
+
+void clean_screen();
+
+void move_cursor(int, int);
+
+void write_line(char*, int);
 
 #endif /* TEXTED_H */
 

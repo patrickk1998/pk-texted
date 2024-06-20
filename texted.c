@@ -159,5 +159,69 @@ void cleanup(int fd)
 	close(fd);
 }
 
+/* DISPLAY FUNCTIONS */
 
+struct termios termset_orig;
+
+void disable_raw()
+{
+	tcsetattr(STDIN_FILENO, TCSAFLUSH, &termset_orig);
+}
+
+void enable_raw()
+{
+	struct termios termset;
+
+	tcgetattr(STDIN_FILENO, &termset);
+
+	termset_orig = termset;
+
+	termset.c_lflag &= ~( ECHO | ICANON | IEXTEN);
+	termset.c_oflag &= ~(OPOST);
+	termset.c_iflag &= ~(ICRNL | IXON);
+
+	tcsetattr(STDIN_FILENO, TCSAFLUSH, &termset);
+
+	atexit(disable_raw);
+
+	return;
+}
+
+void after_display()
+{
+	char b;
+	while( read(STDIN_FILENO, &b, 1) ){
+		if(b == ('q' & 0x1f))
+			exit(0);
+	} 
+
+	return;
+}
+
+
+void clean_screen()
+{
+	char control[] ="\e[?1049l";
+	write(STDOUT_FILENO, control, strlen(control));
+
+	SHOW_CURSOR();
+}
+
+void move_cursor(int row, int col)
+{
+ 	char cs[16];
+	int l = sprintf(cs,"\e[%d;%dH", row, col);
+	write(STDOUT_FILENO, cs, l);
+
+	return;
+}
+
+void write_line(char *line, int row)
+{
+	move_cursor(row,0);
+	for(int i = 0; line[i] != '\0'; i++){
+		// This is bad, need a buffer.
+		write(STDOUT_FILENO, line+i, 1);
+	}
+}
 
