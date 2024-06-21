@@ -39,7 +39,7 @@ void proccess_rbuffer(char *rb, int len, struct line_list *list)
 	int start = 0;
 	struct line_item* cur;
 	if(to_debug)
-		printf("len %d\n", len);
+		dprintf(STDERR_FILENO, "len %d\n", len);
 	while((offset + start) < len){
 		// A more complicated width calculation is needed here, for utf-8 endcoding and software tabs.
 		for(;rb[offset+start] != '\n' && (offset+start < len) && offset < list->width; offset++){
@@ -47,8 +47,9 @@ void proccess_rbuffer(char *rb, int len, struct line_list *list)
 		}
 		cur = new_line(list->width);
 		strncpy(cur->text, rb+start, offset);
+		cur->length = (int)strlen(cur->text); // more complicated for utf-8 encoding and software tabs.
 		if(to_debug)
-			printf("added: %s\n", cur->text);
+			printf("added %ld: %s~\n", cur->length, cur->text);
 		add_line(list, cur, list->lines);
 		// For now assume all the lines are less than the width.
 		start = start + offset+1;
@@ -75,10 +76,14 @@ void merge_lists(struct line_list *a, struct line_list *b)
 		return;
 	}
 
-	//assume for now that now line is overflowing
+	//assume for now that no line is ove
+	if(to_debug)
+		printf("concat: %s + %s\n", a->end->text, b->head->text);
+
 	strcat(a->end->text, b->head->text);
 	a->end->next = b->head->next;
 	a->end->next->prev = a->end;
+	a->end->length = (int)strlen(a->end->text);
 	a->end = b->end;
 	free(b->head);
 }
@@ -187,7 +192,7 @@ void enable_raw()
 	return;
 }
 
-void after_display()
+enum inputAction get_action()
 {
 	char b;
 	enum inputAction action = noop;
@@ -205,10 +210,53 @@ void after_display()
 	if(to_debug)
 		dprintf(STDERR_FILENO,"Action is %d\n", action);
 
-	if(action == quit) 
-		exit(0);
+	return action;
+}
 
-	return;
+
+void update_state(enum inputAction action, struct displayState *state)
+{
+	if(to_debug)
+		dprintf(STDERR_FILENO, "row: %d, col %d, text: %s\n",
+				state->cursorRow, state->cursorColumn, state->cursorLine->text);
+
+	switch(action){
+	case quit:
+		exit(0);
+	case up:
+		if(state->cursorRow > 0){
+			state->cursorRow--;
+			state->cursorLine = state->cursorLine->prev;
+		}
+		break;
+	case down:
+		if(state->cursorLine->next){
+			state->cursorRow++;
+			state->cursorLine = state->cursorLine->next;
+		}
+		break;
+	case left:
+		if(state->cursorColumn > 0)
+			state->cursorColumn--;
+		break;
+	case right:
+		state->cursorColumn++;
+		break;
+	}
+
+	if(state->cursorLine->length < state->cursorColumn)
+		state->cursorColumn = state->cursorLine->length;
+
+	if(to_debug) dprintf(STDERR_FILENO, "After, row: %d, col %d, text: %s\n",
+				state->cursorRow, state->cursorColumn, state->cursorLine->text);
+ 
+}
+
+void display_state(struct displayState *state)
+{
+	if(to_debug) dprintf(STDERR_FILENO,"moving cursor, row: %d, col %d\n",
+			state->cursorRow, state->cursorColumn);
+	move_cursor(state->cursorRow, state->cursorColumn);
 }
 
 
@@ -223,7 +271,7 @@ void clean_screen()
 void move_cursor(int row, int col)
 {
  	char cs[16];
-	int l = sprintf(cs,"\e[%d;%dH", row, col);
+	int l = sprintf(cs,"\e[%d;%dH", row+1, col+1);
 	write(STDOUT_FILENO, cs, l);
 
 	return;

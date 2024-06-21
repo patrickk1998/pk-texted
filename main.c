@@ -41,11 +41,15 @@ int main(int argc, char* argv[])
 
 	atexit(&clean_screen);
 
-	int num = 1;
+	int num = 0;
 	traverse_list(&llist, &display_callback, (long)&num);
 
+	move_cursor(0,0);
+	struct displayState state = { .cursorLine = llist.head };
 	while(1){
-		after_display();
+		enum inputAction action = get_action();
+		update_state(action, &state);
+		display_state(&state);
 	}
 /*
 	int num = 1;	

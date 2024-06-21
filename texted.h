@@ -10,8 +10,9 @@ extern char to_debug;
 
 struct line_item{
 	struct line_item *next, *prev;
-	char flag; // used to store size of text, and if line is full or not.
+	char flag; // used to store size of text, and if line is overflows or not.
 	char *text;	
+	size_t length;
 };
 
 struct line_list{
@@ -45,6 +46,13 @@ void cleanup(int);
 #define CLEAR_SCREEN() write(STDOUT_FILENO,"\e[2J",4)
 #define ALT_BUFFER() write(STDOUT_FILENO,"\e[?1049h",8);
 
+struct displayState{
+	int cursorRow;
+	int cursorColumn;
+	struct line_item* cursorLine;
+
+};
+
 extern struct termios termset_orig;
 
 void disable_raw();
@@ -52,7 +60,6 @@ void disable_raw();
 void enable_raw();
 
 // event loop, read from input and update data; return after that.
-void after_display();
 
 void clean_screen();
 
@@ -74,6 +81,11 @@ enum inputAction{
 
 enum inputAction escape_handle();
 
+enum inputAction get_action();
+
+void update_state(enum inputAction, struct displayState*);
+
+void display_state(struct displayState*);
 #endif /* TEXTED_H */
 
 
