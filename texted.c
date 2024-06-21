@@ -1,5 +1,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 #include <assert.h>
 #include <unistd.h>
 #include <ctype.h>
@@ -192,6 +193,30 @@ void enable_raw()
 	return;
 }
 
+void get_size(struct displayState *state)
+{
+	struct winsize ws;
+	ioctl(STDOUT_FILENO,TIOCGWINSZ, &ws);
+	state->winRows = ws.ws_row;
+	state->winColumns = ws.ws_col;
+
+	if(to_debug) dprintf(STDERR_FILENO, "Window Size row:%hu col:%hu\n",
+			state->winRows,state->winColumns);
+}
+
+void display_list(struct displayState *state)
+{
+	CLEAR_SCREEN();
+	unsigned short i = 0;	
+	struct line_item *cur = state->displayStart;
+	while((i < state->winRows) && cur){
+		//write(STDOUT_FILENO, cur->text, cur->length);
+		write_line(cur->text, (int)i);
+		cur = cur->next;
+		i++;
+	}
+}
+
 enum inputAction get_action()
 {
 	char b;
@@ -204,6 +229,9 @@ enum inputAction get_action()
 		if(b == '\033'){
 			action = escape_handle();
 			break;
+		}
+		if(b == '\b'){
+			action = backspace;
 		}
 	}
 
@@ -228,11 +256,20 @@ void update_state(enum inputAction action, struct displayState *state)
 			state->cursorRow--;
 			state->cursorLine = state->cursorLine->prev;
 		}
+		if(state->cursorRow == 0 && state->cursorLine->prev){
+			state->cursorLine = state->cursorLine->prev;
+			state->displayStart = state->displayStart->prev;
+
+		}
 		break;
 	case down:
-		if(state->cursorLine->next){
+		if(state->cursorLine->next && state->cursorRow < (state->winRows-1)){
 			state->cursorRow++;
 			state->cursorLine = state->cursorLine->next;
+		}
+		if((state->cursorRow == (state->winRows - 1)) && state->cursorLine->next){
+			state->cursorLine = state->cursorLine->next;	
+			state->displayStart = state->displayStart->next;
 		}
 		break;
 	case left:
@@ -249,6 +286,8 @@ void update_state(enum inputAction action, struct displayState *state)
 
 	if(to_debug) dprintf(STDERR_FILENO, "After, row: %d, col %d, text: %s\n",
 				state->cursorRow, state->cursorColumn, state->cursorLine->text);
+
+
  
 }
 
@@ -256,7 +295,9 @@ void display_state(struct displayState *state)
 {
 	if(to_debug) dprintf(STDERR_FILENO,"moving cursor, row: %d, col %d\n",
 			state->cursorRow, state->cursorColumn);
+	display_list(state);
 	move_cursor(state->cursorRow, state->cursorColumn);
+	
 }
 
 

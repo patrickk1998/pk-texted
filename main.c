@@ -28,12 +28,19 @@ int main(int argc, char* argv[])
 		file_name = default_file_name;
 	else 
 		file_name = argv[1];
+	
+	
+	struct displayState state = {};
+	get_size(&state);	
+	state.llist.width = state.winColumns;
 
-	struct line_list llist = { .width = 80 };
-	int fd = create_line_list(file_name, &llist);	
+	int fd = create_line_list(file_name, &state.llist);	
 	if(fd == -1){
 		return 1;
 	}
+	
+	state.cursorLine = state.llist.head;	
+	state.displayStart = state.llist.head;
 
 	enable_raw();
 
@@ -41,11 +48,10 @@ int main(int argc, char* argv[])
 
 	atexit(&clean_screen);
 
-	int num = 0;
-	traverse_list(&llist, &display_callback, (long)&num);
-
+	display_list(&state);
+	
 	move_cursor(0,0);
-	struct displayState state = { .cursorLine = llist.head };
+
 	while(1){
 		enum inputAction action = get_action();
 		update_state(action, &state);

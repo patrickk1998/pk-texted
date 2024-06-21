@@ -50,8 +50,13 @@ struct displayState{
 	int cursorRow;
 	int cursorColumn;
 	struct line_item* cursorLine;
-
+	struct line_item* displayStart;
+	unsigned short winRows;
+	unsigned short winColumns;
+	struct line_list llist;
 };
+
+void get_size(struct displayState*);
 
 extern struct termios termset_orig;
 
@@ -67,6 +72,8 @@ void move_cursor(int, int);
 
 void write_line(char*, int);
 
+void display_list(struct displayState*);
+
 /* INPUT FUNCTIONS */
 
 // Seperate keyboard input from user actions.
@@ -76,7 +83,8 @@ enum inputAction{
 	up,
 	down,
 	left,
-	right
+	right,
+	backspace,
 };
 
 enum inputAction escape_handle();
@@ -86,6 +94,7 @@ enum inputAction get_action();
 void update_state(enum inputAction, struct displayState*);
 
 void display_state(struct displayState*);
+
 #endif /* TEXTED_H */
 
 
