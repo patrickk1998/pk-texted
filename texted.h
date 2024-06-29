@@ -21,19 +21,33 @@ struct line_list{
 	int lines;
 };
 
+/* LIST MANIPULATION */
+
 int create_line_list(char*, struct line_list*);
 
 void proccess_rbuffer(char *, int, struct line_list*);
 
 void merge_lists(struct line_list*, struct line_list*);
 
-struct line_item* new_line(int);
+void add_line(struct line_list*, struct line_item*);
 
-void add_line(struct line_list*, struct line_item*, int);
+void add_line_at(struct line_list*, struct line_item*, struct line_item*);
 
-void remove_line(struct line_list*, int);
+void remove_line(struct line_list*, struct line_item*);
 
 void traverse_list(struct line_list*, int (*callback)(struct line_item*, long), long);
+
+/* ITEM MANIPULATION */
+
+struct line_item* new_line(int);
+
+void free_line(struct line_item*);
+
+void dec_length(struct line_item*);
+
+void inc_length(struct line_item*);
+
+/* HELPER FUNCTIONS */
 
 void read_envs();
 

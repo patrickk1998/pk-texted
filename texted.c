@@ -12,6 +12,8 @@
 
 char to_debug = 0;
 
+/* LIST MANIPULATION */
+
 int create_line_list(char *filename, struct line_list *list)
 {
 	int fd = open(filename, 0); 
@@ -23,7 +25,7 @@ int create_line_list(char *filename, struct line_list *list)
 	char read_buffer[RBUFFER_SIZE];
 	
 	ssize_t rdb;
-	struct line_list tmp_list = { .width = list->width };
+	struct line_list tmp_list = { .width = list->width , .head = NULL};
 	while((rdb = read(fd, read_buffer, RBUFFER_SIZE))){
 		memset(&tmp_list, 0, sizeof(struct line_list));
 		tmp_list.width = list->width;
@@ -51,7 +53,7 @@ void proccess_rbuffer(char *rb, int len, struct line_list *list)
 		cur->length = (int)strlen(cur->text); // more complicated for utf-8 encoding and software tabs.
 		if(to_debug)
 			printf("added %ld: %s~\n", cur->length, cur->text);
-		add_line(list, cur, list->lines);
+		add_line(list, cur);
 		// For now assume all the lines are less than the width.
 		start = start + offset+1;
 		offset = 0;
@@ -86,8 +88,64 @@ void merge_lists(struct line_list *a, struct line_list *b)
 	a->end->next->prev = a->end;
 	a->end->length = (int)strlen(a->end->text);
 	a->end = b->end;
-	free(b->head);
+	free_line(b->head);
 }
+
+// This function is doing two things, insertion and append;
+void add_line(struct line_list *list, struct line_item *new_line)
+{
+	if(list->head == NULL){
+		list->head = new_line;
+		list->end = new_line;
+	} else {
+		list->end->next = new_line;
+		new_line->prev = list->end;
+		list->end = new_line;
+	}
+
+	list->lines++;
+	return;
+}
+
+void add_line_at(struct line_list* list, struct line_item* current, struct line_item* new)
+{
+	if(current->next){
+		current->next->prev = new;
+		new->next = current->next;
+	} else {
+		list->end = new;
+	}
+		current->next = new;
+		new->prev = current;
+	list->lines++;
+}
+
+void remove_line(struct line_list *list, struct line_item  *item)
+{
+	if(item == list->head){
+		item->next->prev = item->prev;
+		list->head = item->next;
+	} else if (item == list->end){
+		item->prev->next = item->next;
+		list->end = item->prev;
+	} else {
+		item->prev->next = item->next;
+		item->next->prev = item->prev;
+	}
+
+	free_line(item);
+	list->lines--;
+}
+
+void traverse_list(struct line_list *list, int (*callback)(struct line_item*, long), long data)
+{
+	assert(callback);
+	struct line_item *curr = list->head;
+	while((*callback)(curr, data) && curr != list->end)
+		curr = curr->next;
+}
+
+/* ITEM MANIPULATION */
 
 struct line_item* new_line(int width)
 {
@@ -99,52 +157,25 @@ struct line_item* new_line(int width)
 	return item;
 }
 
-void add_line(struct line_list *list, struct line_item *new_line, int pos)
+void free_line(struct line_item *item)
 {
-	if(list->head == NULL){
-		list->head = new_line;
-		list->end = new_line;
-	}	
-	
-	assert(pos >= 0 && pos <= list->lines);
-
-	if(pos == 0){
-		new_line->next = list->head;	
-		list->head->prev = new_line;
-		list->head = new_line;
-		goto increment;
-	}
-
-	if(pos == list->lines){
-		new_line->prev = list->end;
-		list->end->next = new_line;
-		list->end = new_line;
-		goto increment;	
-	}
-
-	struct line_item* cur = list->head;
-	for(int i = 0; i != pos; i++)
-		cur = cur->next;
-	
-	new_line->next = cur;
-	new_line->prev = cur->prev;
-	cur->prev = new_line;		
-	new_line->prev->next = new_line;
-	goto increment;
-
-	increment:
-	list->lines++;
-	return;
-
+	free(item->text);
+	free(item);
 }
 
-void traverse_list(struct line_list *list, int (*callback)(struct line_item*, long), long data)
+void dec_length(struct line_item* item)
 {
-	assert(callback);
-	struct line_item *curr = list->head;
-	while((*callback)(curr, data) && curr != list->end)
-		curr = curr->next;
+	item->length--;
+	item->text[item->length] = '\0';
 }
+
+void inc_length(struct line_item* item)
+{
+	item->length++;
+	item->text[item->length] = '\0';
+}
+
+/* HELPER FUNCTIONS */
 
 void read_envs()
 {
