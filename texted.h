@@ -17,7 +17,7 @@ struct line_item{
 
 struct line_list{
 	struct line_item *head, *end;
-	int width;
+	size_t width;
 	int lines;
 };
 
@@ -47,6 +47,8 @@ void dec_length(struct line_item*);
 
 void inc_length(struct line_item*);
 
+void cat_item(struct line_item*, struct line_item*, size_t);
+
 /* HELPER FUNCTIONS */
 
 void read_envs();
@@ -68,6 +70,8 @@ struct displayState{
 	unsigned short winRows;
 	unsigned short winColumns;
 	struct line_list llist;
+	char to_insert;
+	char saved;
 };
 
 void get_size(struct displayState*);
@@ -84,7 +88,7 @@ void clean_screen();
 
 void move_cursor(int, int);
 
-void write_line(char*, int);
+void write_line(struct line_item*, int);
 
 void display_list(struct displayState*);
 
@@ -99,6 +103,8 @@ enum inputAction{
 	left,
 	right,
 	backspace,
+	insert,
+	creturn,
 };
 
 enum inputAction escape_handle();

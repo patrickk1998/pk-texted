@@ -12,7 +12,7 @@ static int callback(struct line_item *item, long data)
 
 static int display_callback(struct line_item *item, long data)
 {
-	write_line(item->text, *(int*)data);
+	write_line(item, *(int*)data);
 	(*(int*)data)++;
 	return 1;
 }
@@ -33,6 +33,7 @@ int main(int argc, char* argv[])
 	struct displayState state = {};
 	get_size(&state);	
 	state.llist.width = state.winColumns;
+	state.llist.head = NULL;
 
 	int fd = create_line_list(file_name, &state.llist);	
 	if(fd == -1){
@@ -41,6 +42,7 @@ int main(int argc, char* argv[])
 	
 	state.cursorLine = state.llist.head;	
 	state.displayStart = state.llist.head;
+
 
 	enable_raw();
 
@@ -53,7 +55,7 @@ int main(int argc, char* argv[])
 	move_cursor(0,0);
 
 	while(1){
-		enum inputAction action = get_action();
+		enum inputAction action = get_action(&state.to_insert);
 		update_state(action, &state);
 		display_state(&state);
 	}

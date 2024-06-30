@@ -83,10 +83,9 @@ void merge_lists(struct line_list *a, struct line_list *b)
 	if(to_debug)
 		printf("concat: %s + %s\n", a->end->text, b->head->text);
 
-	strcat(a->end->text, b->head->text);
+	cat_item(a->end, b->head, a->width);
 	a->end->next = b->head->next;
 	a->end->next->prev = a->end;
-	a->end->length = (int)strlen(a->end->text);
 	a->end = b->end;
 	free_line(b->head);
 }
@@ -123,10 +122,10 @@ void add_line_at(struct line_list* list, struct line_item* current, struct line_
 void remove_line(struct line_list *list, struct line_item  *item)
 {
 	if(item == list->head){
-		item->next->prev = item->prev;
+		item->next->prev = 0;
 		list->head = item->next;
 	} else if (item == list->end){
-		item->prev->next = item->next;
+		item->prev->next = 0;
 		list->end = item->prev;
 	} else {
 		item->prev->next = item->next;
@@ -173,6 +172,16 @@ void inc_length(struct line_item* item)
 {
 	item->length++;
 	item->text[item->length] = '\0';
+}
+
+void cat_item(struct line_item* a, struct line_item* b, size_t width)
+{
+	int i = 0;
+	for(; i + a->length < width && i < b->length; i++){
+		a->text[i+a->length] = b->text[i];
+	}
+	a->length = i + a->length;
+	a->text[a->length] = '\0';
 }
 
 /* HELPER FUNCTIONS */
@@ -242,17 +251,18 @@ void display_list(struct displayState *state)
 	struct line_item *cur = state->displayStart;
 	while((i < state->winRows) && cur){
 		//write(STDOUT_FILENO, cur->text, cur->length);
-		write_line(cur->text, (int)i);
+		write_line(cur, (int)i);
 		cur = cur->next;
 		i++;
 	}
 }
 
-enum inputAction get_action()
+enum inputAction get_action(char *to_insert)
 {
 	char b;
 	enum inputAction action = noop;
 	while( read(STDIN_FILENO, &b, 1) ){
+		if(to_debug) dprintf(STDERR_FILENO, "Key is %d", (int)b);
 		if(b == ('q' & 0x1f)){
 			action = quit;
 			break;
@@ -261,8 +271,18 @@ enum inputAction get_action()
 			action = escape_handle();
 			break;
 		}
-		if(b == '\b'){
+		if(b == 127){
 			action = backspace;
+			break;
+		}
+		if(isgraph(b) || isblank(b)){
+			action = insert;
+			*to_insert = b;
+			break;
+		}
+		if(b == 13){
+			action = creturn;
+			break;
 		}
 	}
 
@@ -282,6 +302,55 @@ void update_state(enum inputAction action, struct displayState *state)
 	switch(action){
 	case quit:
 		exit(0);
+	case backspace:
+		if(state->cursorColumn > 0){
+			int j = -1;
+			char* text = state->cursorLine->text;
+			for(int i = 0; i <= state->cursorLine->length ; i++){
+				if(i != state->cursorColumn) j++;
+				text[j] = text[i];
+			}
+			text[j+1] = '\0';
+			state->cursorLine->length--;
+			state->cursorColumn--;
+		}
+		if(state->cursorColumn == 0 && state->cursorLine->prev){
+			struct line_item* prev = state->cursorLine->prev;
+			cat_item(prev, state->cursorLine, state->llist.width);
+			remove_line(&state->llist,state->cursorLine);
+			state->cursorLine = prev;
+			state->cursorRow--;
+			state->cursorColumn = state->cursorLine->length;
+		}
+		break;
+	case insert:
+		;
+		char *text = state->cursorLine->text;
+		for(int i = state->cursorLine->length; i > state->cursorColumn; i--){
+			text[i] = text[i-1];
+		}
+		text[state->cursorColumn] = state->to_insert;
+		state->cursorLine->length++; // Make this into a function so text[length] is '\0'.
+		text[state->cursorLine->length] = '\0';
+		state->cursorColumn++;
+		break;
+	case creturn:
+		;
+		struct line_item *cl = state->cursorLine;
+		struct line_item *nl = new_line(state->winColumns);
+		int j = 0;
+		for(int i = state->cursorColumn; i < cl->length; i++){
+			nl->text[j] = cl->text[i];
+			j++;
+		}
+		cl->text[state->cursorColumn] = '\0';
+		nl->length = cl->length - state->cursorColumn;
+		cl->length = state->cursorColumn;
+		add_line_at(&state->llist, cl, nl);
+		state->cursorRow++;
+		state->cursorLine = state->cursorLine->next;
+		state->cursorColumn = 0;
+		break;
 	case up:
 		if(state->cursorRow > 0){
 			state->cursorRow--;
@@ -317,9 +386,6 @@ void update_state(enum inputAction action, struct displayState *state)
 
 	if(to_debug) dprintf(STDERR_FILENO, "After, row: %d, col %d, text: %s\n",
 				state->cursorRow, state->cursorColumn, state->cursorLine->text);
-
-
- 
 }
 
 void display_state(struct displayState *state)
@@ -349,13 +415,10 @@ void move_cursor(int row, int col)
 	return;
 }
 
-void write_line(char *line, int row)
+void write_line(struct line_item* line, int row)
 {
 	move_cursor(row,0);
-	int i = 0;
-	for(; line[i] != '\0'; i++);
-	write(STDOUT_FILENO, line, i);
-
+	write(STDOUT_FILENO, line->text, line->length);
 }
 
 
