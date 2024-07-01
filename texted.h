@@ -109,7 +109,7 @@ enum inputAction{
 
 enum inputAction escape_handle();
 
-enum inputAction get_action();
+enum inputAction get_action(char*);
 
 void update_state(enum inputAction, struct displayState*);
 
