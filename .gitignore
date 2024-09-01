@@ -1,3 +1,4 @@
 *.o
 texted
+tty_test
 *.swp
