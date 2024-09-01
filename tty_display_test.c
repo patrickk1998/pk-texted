@@ -3,11 +3,13 @@
 #include <sys/time.h>
 #include "display.h"
 
-void (*render_queue[2])(struct display *);
+#define RENDER_QUEUE_SIZE 2
+
+void (*render_queue[RENDER_QUEUE_SIZE])(struct display *);
 
 void render_scenes(struct display * dis)
 {
-	for(int i = 0; i < 3; i++){
+	for(int i = 0; i < RENDER_QUEUE_SIZE; i++){
 		if(render_queue[i] != NULL)
 			render_queue[i](dis);
 	}
