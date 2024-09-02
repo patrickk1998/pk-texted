@@ -2,6 +2,9 @@
 #include <sys/ioctl.h>
 #include <termios.h>
 
+#ifndef DISPLAY_H
+#define DISPLAY_H
+
 /*
 	GENERIC DISPLAY INTERFACE
 */
@@ -18,6 +21,7 @@ struct display{
 	void (*display_line)(struct display*, int);
 	void (*set_cursor)(struct display *, int, int);
 	void (*get_size)(struct display *, int *, int *);
+	void (*clear_display)(struct display *);
 	struct resize_event *resize_callback;
 };
 
@@ -44,3 +48,5 @@ struct tty_display{
 };
 
 struct display *make_tty_display(struct tty_display *);
+
+#endif /* DISPLAY_H */

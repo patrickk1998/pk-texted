@@ -81,7 +81,8 @@ int main()
 	render_scenes(dis);
 
 	pausefor(15);
-	
+
+	dis->clear_display(dis);
 	render_queue[0] = goodbye_scene;
 	render_scenes(dis);
 	
