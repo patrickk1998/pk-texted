@@ -146,9 +146,10 @@ static void tty_set_cursor(struct display *super, int row, int col)
 static void tty_put_line(struct display *super, char *line, int row)
 {
 	struct tty_display *ttyd = (struct tty_display *)((char *)super - offsetof(struct tty_display, super));	
+	memset(ttyd->buffer + row * ttyd->width, 0, ttyd->width);
 	for(int i = 0; i < ttyd->width; i++){	
 		if(line[i] == '\0'){
-			ttyd->line_len[row] = i + 1;
+			ttyd->line_len[row] = i;
 			break;
 		}
 		ttyd->buffer[i + row * ttyd->width] = line[i];
