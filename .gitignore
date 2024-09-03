@@ -1,4 +1,5 @@
 *.o
 texted
 tty_test
+input_test
 *.swp
