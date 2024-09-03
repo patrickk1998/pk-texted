@@ -3,13 +3,13 @@
 #include <unistd.h>
 #include <stdio.h>
 
-#define TEST_QUEUE_MAX_LEN 10
+#define TEST_QUEUE_MAX_LEN 20
 
 #define ADD_TYPE(t) test_queue[tq_len].type = t; \
 	tq_len++;
 
 #define ADD_INSERT(v) test_queue[tq_len].type = insert; \
-	test_queue[tq_len].value = 'a'; \
+	test_queue[tq_len].value = v; \
 	tq_len++;
 
 int tq_len = 0;
@@ -81,6 +81,14 @@ int main()
 	ADD_INSERT('d');
 	ADD_TYPE(backspace);
 	ADD_TYPE(creturn);
+	ADD_TYPE(creturn);
+	ADD_INSERT('z');
+	ADD_INSERT('y');
+	ADD_INSERT('x');
+	ADD_TYPE(backspace);
+	ADD_INSERT('w');
+	ADD_TYPE(creturn);
+	ADD_TYPE(down);
 
 	printf("STARTING %d TEST(S)\n", tq_len);
 	struct input_action b;
