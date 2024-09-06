@@ -28,5 +28,15 @@ display.o: display.c display.h
 input.o: input.c input.h
 	$(CC) $(CFLAGS) -c input.c
 
+text_test: text_test.o text.o
+	$(CC) $(CFLAGS) -o text_test text_test.o text.o
+
+text_test.o: text_test.c text.h
+	$(CC) $(CFLAGS) -c text_test.c
+
+text.o: text.c text.h
+	$(CC) $(CFLAGS) -c text.c
+
+
 clean:
 	rm *.o

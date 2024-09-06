@@ -1,0 +1,233 @@
+#include "text.h"
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#define GET_BXT(s) (struct basic_text*)((char *)s - offsetof(struct basic_text, super));
+
+/* Setters and getters */
+
+static void bxt_set_row_width(struct text *xt, int width)
+{
+	struct basic_text *bxt = GET_BXT(xt);
+	bxt->row_width = width;
+}
+
+static int bxt_get_row_width(struct text *xt)
+{
+	struct basic_text *bxt = GET_BXT(xt);
+	return bxt->row_width;
+}
+
+static void bxt_set_fd(struct text *xt, int fd)
+{
+	struct basic_text *bxt = GET_BXT(xt);	
+	bxt->fd = fd;
+}
+
+static int bxt_is_dirty(struct text *xt)
+{
+	struct basic_text *bxt = GET_BXT(xt);
+	return bxt->dirty;
+}
+
+static int bxt_get_total_lines(struct text *xt)
+{
+	struct basic_text *bxt = GET_BXT(xt);
+	return bxt->total_lines;
+}
+
+/* Load and Save */
+
+// For now assume that all characters – glphys, letters, tabs – are one byte.
+static int next_character(int fd, char *c)
+{
+	return read(fd, c, 1);
+}
+
+static struct line *make_line(int width)
+{
+	struct line *l = malloc(sizeof(struct line));
+	memset(l, 0, sizeof(struct line));
+	// width + 1 so all strings are null terminated.
+	l->text = (char *)malloc(width + 1);
+	memset(l->text, 0 , width + 1);
+	l->id = (long)l;
+	return l;
+}
+
+static void free_line(struct line *l)
+{
+	free(l->text);
+	free(l);
+}
+
+// Assume all characters are ascii, no tabs for now, and are less than max width.
+static void bxt_load_file(struct text *xt)
+{
+	struct basic_text *bxt = GET_BXT(xt);	
+
+	struct line *current = make_line(bxt->row_width);
+	bxt->head = current;
+	char c;
+	int c_size, l_size = 0;
+	while((c_size = next_character(bxt->fd, &c))){
+		if(c == '\n' || l_size >= bxt->row_width){
+			current->len = l_size;
+			struct line *n = make_line(bxt->row_width);
+			current->next = n;
+			n->prev = current;
+			bxt->total_lines++;
+			current = n;
+			l_size = 0;
+			if(c == '\n')
+				continue;
+		}
+		l_size += c_size;
+		current->text[l_size - 1] = c;
+	}
+}
+
+static void bxt_save_file(struct text *xt)
+{
+	struct basic_text *bxt = GET_BXT(xt);
+	size_t file_len = 0;
+	struct line *current = bxt->head;
+	while(current->next){
+		write(bxt->fd, current->text, current->len);
+		if(current->next){
+			write(bxt->fd, "\n", 1);
+		}
+		file_len = file_len + 1 + current->len;	
+		current = current->next;
+	}
+	ftruncate(bxt->fd, file_len);
+	bxt->dirty = 0;
+}
+
+static void bxt_unload_file(struct text *xt)
+{
+	struct basic_text *bxt = GET_BXT(xt);
+
+	struct line *current = bxt->head;
+	while(current){
+		struct line *tmp = current;
+		current = current->next;
+		free_line(tmp);
+	}
+}
+
+/* Line Access */
+
+
+static line_id bxt_get_first_line(struct text *xt)
+{
+	struct basic_text *bxt = GET_BXT(xt);
+	return bxt->head->id;
+}
+
+static line_id bxt_next_line(struct text *xt, line_id id)
+{	
+	if(((struct line *)id)->next){
+		return ((struct line *)id)->next->id;
+	} else {
+		return 0;
+	}
+}
+
+static line_id bxt_prev_line(struct text *xt, line_id id)
+{
+	if(((struct line *)id)->prev){
+		return ((struct line *)id)->prev->id;
+	} else {
+		return 0;
+	}
+}
+
+static const char *bxt_get_text(struct text *xt, line_id line)
+{
+	return ((struct line *)line)->text;
+}
+
+static void bxt_set_text(struct text *xt, line_id line, char *str)
+{
+	struct basic_text *bxt = GET_BXT(xt); 
+	strncpy(((struct line *)line)->text, str, bxt->row_width);
+	bxt->dirty = 1;
+}
+
+/* control */
+
+static void bxt_delete_line(struct text *xt, line_id id)
+{
+	struct basic_text *bxt = GET_BXT(xt); 
+	struct line *line = (struct line *)id;
+	if(line->prev == NULL){
+		line->next->prev = NULL;
+		bxt->head = line->next;
+	} else {
+		line->next->prev = line->prev;
+	}
+
+	if(line->next == NULL){
+		line->prev = NULL;
+	} else {
+		line->prev->next = line->next;
+	}
+	free_line(line);
+	bxt->dirty = 1;
+}
+
+static line_id bxt_insert_after(struct text *xt, line_id id, char *str)
+{
+	struct basic_text *bxt = GET_BXT(xt); 
+	struct line *line = (struct line *)id;
+	struct line *new_line = make_line(bxt->row_width);			
+	bxt_set_text(xt, new_line->id, str);
+	if(line->next){
+		line->next->prev = new_line;
+		new_line->next = line->next;
+	}
+	line->next = new_line;
+	bxt->dirty = 1;
+	return new_line->id;
+}
+
+static line_id bxt_insert_before(struct text *xt, line_id id, char *str)
+{
+	struct basic_text *bxt = GET_BXT(xt); 
+	struct line *line = (struct line *)id;
+	struct line *new_line = make_line(bxt->row_width);			
+	bxt_set_text(xt, new_line->id, str);
+	if(line->prev){
+		line->prev->next = new_line;
+		new_line->prev = line->prev;
+	} else {
+		bxt->head= new_line;			
+		new_line->prev = NULL;
+	}
+	line->prev = new_line;
+	bxt->dirty = 1;
+	return new_line->id;
+}
+
+struct text *make_basic_text(struct basic_text *bxt)
+{
+	bxt->super.set_row_width = bxt_set_row_width;
+	bxt->super.get_row_width = bxt_get_row_width;
+	bxt->super.set_fd = bxt_set_fd;
+	bxt->super.is_dirty = bxt_is_dirty;
+	bxt->super.get_total_lines = bxt_get_total_lines;
+	bxt->super.load_file = bxt_load_file;
+	bxt->super.save_file = bxt_save_file;
+	bxt->super.unload_file = bxt_unload_file;
+	bxt->super.get_first_line = bxt_get_first_line;
+	bxt->super.next_line = bxt_next_line;
+	bxt->super.prev_line = bxt_prev_line;
+	bxt->super.delete_line = bxt_delete_line;
+	bxt->super.insert_after = bxt_insert_after;
+	bxt->super.insert_before =  bxt_insert_before;
+	bxt->super.get_text = bxt_get_text;
+	bxt->super.set_text = bxt_set_text;
+	return &(bxt->super);	
+}
