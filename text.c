@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdio.h>
 
 #define GET_BXT(s) (struct basic_text*)((char *)s - offsetof(struct basic_text, super));
 
@@ -66,11 +67,12 @@ static void free_line(struct line *l)
 static void bxt_load_file(struct text *xt)
 {
 	struct basic_text *bxt = GET_BXT(xt);	
-
+	bxt->total_lines = 1;
 	struct line *current = make_line(bxt->row_width);
 	bxt->head = current;
 	char c;
 	int c_size, l_size = 0;
+	lseek(bxt->fd, 0, SEEK_SET);
 	while((c_size = next_character(bxt->fd, &c))){
 		if(c == '\n' || l_size >= bxt->row_width){
 			current->len = l_size;
@@ -86,6 +88,8 @@ static void bxt_load_file(struct text *xt)
 		l_size += c_size;
 		current->text[l_size - 1] = c;
 	}
+	current->len = l_size;
+	bxt->tail = current;		
 }
 
 static void bxt_save_file(struct text *xt)
@@ -93,12 +97,14 @@ static void bxt_save_file(struct text *xt)
 	struct basic_text *bxt = GET_BXT(xt);
 	size_t file_len = 0;
 	struct line *current = bxt->head;
-	while(current->next){
+	lseek(bxt->fd, 0, SEEK_SET);
+	while(current){
 		write(bxt->fd, current->text, current->len);
+		file_len = file_len + current->len;	
 		if(current->next){
 			write(bxt->fd, "\n", 1);
+			file_len++;
 		}
-		file_len = file_len + 1 + current->len;	
 		current = current->next;
 	}
 	ftruncate(bxt->fd, file_len);
@@ -124,6 +130,12 @@ static line_id bxt_get_first_line(struct text *xt)
 {
 	struct basic_text *bxt = GET_BXT(xt);
 	return bxt->head->id;
+}
+
+static line_id bxt_get_last_line(struct text *xt)
+{
+	struct basic_text *bxt = GET_BXT(xt);
+	return bxt->tail->id;
 }
 
 static line_id bxt_next_line(struct text *xt, line_id id)
@@ -152,19 +164,26 @@ static const char *bxt_get_text(struct text *xt, line_id line)
 static void bxt_set_text(struct text *xt, line_id line, char *str)
 {
 	struct basic_text *bxt = GET_BXT(xt); 
-	strncpy(((struct line *)line)->text, str, bxt->row_width);
+	struct line *l = (struct line*)line;
+	l->len =  stpncpy(l->text, str, bxt->row_width) - l->text;
 	bxt->dirty = 1;
 }
 
 /* control */
 
-static void bxt_delete_line(struct text *xt, line_id id)
+static line_id bxt_delete_line(struct text *xt, line_id id)
 {
 	struct basic_text *bxt = GET_BXT(xt); 
 	struct line *line = (struct line *)id;
+	// Delete nothing if this is the only line.
+	if(line->prev == NULL && line->next == NULL){
+		return id;
+	}
+	bxt->total_lines--;
 	if(line->prev == NULL){
 		line->next->prev = NULL;
 		bxt->head = line->next;
+		return bxt->head->id;
 	} else {
 		line->next->prev = line->prev;
 	}
@@ -174,8 +193,10 @@ static void bxt_delete_line(struct text *xt, line_id id)
 	} else {
 		line->prev->next = line->next;
 	}
+	line_id new_id = line->prev->id;
 	free_line(line);
 	bxt->dirty = 1;
+	return new_id;
 }
 
 static line_id bxt_insert_after(struct text *xt, line_id id, char *str)
@@ -187,9 +208,14 @@ static line_id bxt_insert_after(struct text *xt, line_id id, char *str)
 	if(line->next){
 		line->next->prev = new_line;
 		new_line->next = line->next;
+	} else {
+		bxt->tail = new_line;
+		new_line->next = NULL;
 	}
 	line->next = new_line;
+	new_line->prev = line;
 	bxt->dirty = 1;
+	bxt->total_lines++;
 	return new_line->id;
 }
 
@@ -207,7 +233,9 @@ static line_id bxt_insert_before(struct text *xt, line_id id, char *str)
 		new_line->prev = NULL;
 	}
 	line->prev = new_line;
+	new_line->next = line;
 	bxt->dirty = 1;
+	bxt->total_lines++;
 	return new_line->id;
 }
 
@@ -222,6 +250,7 @@ struct text *make_basic_text(struct basic_text *bxt)
 	bxt->super.save_file = bxt_save_file;
 	bxt->super.unload_file = bxt_unload_file;
 	bxt->super.get_first_line = bxt_get_first_line;
+	bxt->super.get_last_line = bxt_get_last_line;
 	bxt->super.next_line = bxt_next_line;
 	bxt->super.prev_line = bxt_prev_line;
 	bxt->super.delete_line = bxt_delete_line;

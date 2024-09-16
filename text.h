@@ -4,6 +4,12 @@ typedef long line_id;
 
 /* Generic Text Interface */
 
+
+/*
+		delete_line: get line_id of line above it, or first line.
+		For functions that return a line_id type, a value of 0 means
+		NULL.
+*/
 struct text{
 	void (*set_row_width)(struct text *, int);
 	int (*get_row_width)(struct text *);
@@ -14,9 +20,10 @@ struct text{
 	int (*is_dirty)(struct text *);
 	int (*get_total_lines)(struct text *);
 	line_id (*get_first_line)(struct text *);
+	line_id (*get_last_line)(struct text *);
 	line_id (*next_line)(struct text *, line_id);
 	line_id (*prev_line)(struct text *, line_id);
-	void (*delete_line)(struct text *, line_id);
+	line_id (*delete_line)(struct text *, line_id);
 	line_id (*insert_after)(struct text *, line_id, char *);
 	line_id (*insert_before)(struct text *, line_id, char *);
 	const char *(*get_text)(struct text *, line_id);	
@@ -31,6 +38,7 @@ struct basic_text{
 	int fd;
 	int dirty;
 	struct line *head;
+	struct line *tail;
 	struct text super;
 };
 
