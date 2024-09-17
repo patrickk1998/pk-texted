@@ -1,5 +1,8 @@
 #include <stddef.h>
 
+#ifndef TEXT_H
+#define TEXT_H
+
 typedef long line_id;
 
 /* Generic Text Interface */
@@ -52,3 +55,5 @@ struct line{
 };
 
 struct text *make_basic_text(struct basic_text *);
+
+#endif /* TEXTED_H */

@@ -143,7 +143,7 @@ static void tty_set_cursor(struct display *super, int row, int col)
 	write(ttyd->fd, cs, l);
 }
 
-static void tty_put_line(struct display *super, char *line, int row)
+static void tty_put_line(struct display *super, const char *line, int row)
 {
 	struct tty_display *ttyd = (struct tty_display *)((char *)super - offsetof(struct tty_display, super));	
 	memset(ttyd->buffer + row * ttyd->width, 0, ttyd->width);
@@ -175,6 +175,16 @@ static void tty_clear_display(struct display *super)
 	clear_screen(ttyd->fd);
 	memset(ttyd->buffer, 0, ttyd->height*ttyd->width);
 	memset(ttyd->line_len, 0, ttyd->height*sizeof(int));
+}
+
+static void tty_clear_row(struct display *super, int row)
+{
+	struct tty_display *ttyd = (struct tty_display *)((char *)super - offsetof(struct tty_display, super));	
+	tty_set_cursor(super, 0, row);	
+	clear_line(ttyd->fd);
+	tty_set_cursor(super, ttyd->cursor_col, ttyd->cursor_row);	
+	memset(ttyd->buffer + row * ttyd->width, 0, ttyd->width);
+	ttyd->line_len[row] = 0;
 }
 
 struct display *make_tty_display(struct tty_display *ttyd)

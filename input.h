@@ -1,5 +1,8 @@
 /* INPUT FUNCTIONS */ /* <-- Not tested, but look okay */
 
+#ifndef INPUT_H
+#define INPUT_H
+
 // Seperate keyboard input from user actions.
 enum input_type{
 	noop,
@@ -19,3 +22,5 @@ struct input_action{
 };
 
 void get_action(struct input_action *);
+
+#endif /* INPUT_H */
