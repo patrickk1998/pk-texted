@@ -17,11 +17,12 @@ struct resize_event{
 struct display{
 	int  (*open_display)(struct display *, int *, int *);
 	void (*close_display)(struct display *);
-	void (*put_line)(struct display *, char *, int);
+	void (*put_line)(struct display *, const char *, int);
 	void (*display_line)(struct display*, int);
 	void (*set_cursor)(struct display *, int, int);
 	void (*get_size)(struct display *, int *, int *);
 	void (*clear_display)(struct display *);
+	void (*clear_line)(struct display *, int);
 	struct resize_event *resize_callback;
 };
 

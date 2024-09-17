@@ -1,8 +1,8 @@
 CC=cc
 CFLAGS= -Wall -g
 
-texted: texted.o main.o display.o
-	$(CC) $(CFLAGS) -o texted texted.o main.o display.o
+texted: texted.o main.o display.o text.o input.o
+	$(CC) $(CFLAGS) -o texted texted.o main.o display.o text.o input.o
 
 texted.o: texted.c texted.h display.h
 	$(CC) $(CFLAGS) -c texted.c

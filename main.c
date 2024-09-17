@@ -1,27 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include "texted.h"
-
-
-static int callback(struct line_item *item, long data)
-{
-	printf("%d\t %s\n", *(int*)data, item->text);	
-	(*(int*)data)++;
-	return 1;
-}
-
-static int display_callback(struct line_item *item, long data)
-{
-	write_line(item, *(int*)data);
-	(*(int*)data)++;
-	return 1;
-}
+#include "input.h"
+#include "display.h"
+#include "text.h"
 
 int main(int argc, char* argv[])
 {
-	read_envs();
-	if(to_debug)
-		printf("Debugging!");
 	char default_file_name[] = "text/example1";
 	char *file_name;
 	if(argc < 2)
@@ -29,42 +15,45 @@ int main(int argc, char* argv[])
 	else 
 		file_name = argv[1];
 	
-	
-	struct displayState state = {};
-	get_size(&state);	
-	state.llist.width = state.winColumns;
-	state.llist.head = NULL;
 
-	int fd = create_line_list(file_name, &state.llist);	
-	if(fd == -1){
+	/* Intializing Display Object and Render */
+	struct tty_display ttyd;	
+	// Does not really matter if standard in or standard out as both 
+	// should be connected to the same tty.
+	ttyd.fd = STDIN_FILENO; 
+	struct display *dis = make_tty_display(&ttyd);		
+	int w, h;
+	dis->open_display(dis, &w, &h);	
+	
+	/* Open File */
+	struct basic_text bxt;
+	struct text *xt = make_basic_text(&bxt);
+	int fd;
+	if((fd = open(file_name, O_RDWR , 0666)) < 0){
+		perror("Problem with opening file");
 		return 1;
-	}
-	
-	state.cursorLine = state.llist.head;	
-	state.displayStart = state.llist.head;
+	}		
+	xt->set_fd(xt, fd);
+	xt->set_row_width(xt, w);
+	xt->load_file(xt);
 
+	/* Make State */
+	struct displayState state;
+	makeState(&state, xt, h);
+	renderState(&state, dis);
 
-	enable_raw();
-
-	ALT_BUFFER();
-
-	atexit(&clean_screen);
-
-	display_list(&state);
-	
-	move_cursor(0,0);
-
+	struct input_action action;
 	while(1){
-		enum inputAction action = get_action(&state.to_insert);
-		update_state(action, &state);
-		display_state(&state);
+		get_action(&action);
+		//update_state(&action, &state);
+		if(action.type == quit){
+			break;
+		} else {
+			continue;
+		}
+		//render_state(dis, &state);
 	}
-/*
-	int num = 1;	
-	traverse_list(&llist, &callback, (long)&num);
-
-	printf("Opened %s\n", file_name);
-*/
-	cleanup(fd);
+	
+	dis->close_display(dis);
 	return 0;
 }
