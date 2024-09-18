@@ -228,6 +228,31 @@ int compare_files(int fda, int fdb)
 	}	
 }
 
+/*
+	** Tests **
+
+	There are five tests that cover the whole behavior of the struct text object.
+
+	Row Width Test:
+		Checks if row width setter and getter functions work correctly.
+
+	Basic Load and Save Test:
+		Checks if load and save function correctly. This tests generates
+		a from a file from a random seed RAND1. Refcount on all lines should be zero at the end of the test.
+
+	Insert Test 1:
+		Checks if insert_after() function works correctly. The file contents are 
+		generated are from random seed RAND2. Refcount on all lines should be zero at the end of the test.
+	
+	Insert Test 2:
+		Checks if insert_before() function works correctly. Refcount on all lines should be zero at the end of the test.
+
+	Traverse Test:
+		Checks traversing the lines of the text object using next_line() and prev_line(). This is a multithreaded test 
+		also checking that reference counting works in a mulit-threaded enviorment. Refcount on all lines should 
+		be zero at the end of the test.
+*/
+
 int main()
 {
 	struct basic_text bxt;
