@@ -4,11 +4,17 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <pthread.h>
 
 #define TEST_FILE_NAME ".pktexted_test_file"
 #define TEST_FILE_NAME_SAVE ".pktexted_test_file_save"
 #define TEST_FILE_LINES 500
 #define TEST_LINE_LEN 80
+#define THREADS_NUM 20
+
+// Random Seeds
+#define RAND1 1
+#define RAND2 1
 
 char rand_buf[TEST_LINE_LEN];
 int rand_buf_len;
@@ -87,6 +93,7 @@ int generate_after_file(int seed, struct text *xt, int *fd)
 		if((i+1) != lines)
 			write(fd[0], "\n", 1);
 	}
+	xt->put_line(xt, current_id);
 
 	lseek(fd[0], 0, SEEK_SET);
 	lseek(fd[1], 0, SEEK_SET);
@@ -115,57 +122,88 @@ int generate_before_file(int seed, struct text *xt, int *fd)
 	xt->load_file(xt);
 	line_id current_id = xt->get_first_line(xt);
 	
-	for(int i = 0; i < lines; i++){
-		xt->set_text(xt, current_id, "bbbb");
-		if((i+1) != lines)
-			current_id = xt->insert_before(xt, current_id, "");
+	xt->set_text(xt, current_id, "aaaa");
+	for(int i = 1; i < lines; i++){
+		current_id = xt->insert_before(xt, current_id, "aaaa");
 	}
-
-	current_id = xt->get_first_line(xt);
-	while(current_id){
-		xt->set_text(xt, current_id, "aaaa");
-		current_id = xt->next_line(xt, current_id);
-	}
+	xt->put_line(xt, current_id);
 
 	lseek(fd[0], 0, SEEK_SET);
 	return 0;
 }
 
-int traverse_test(struct text *xt)
+int generate_traverse_file(struct text *xt)
 {
 	int fd;
 	if((fd = open(TEST_FILE_NAME, O_RDWR | O_CREAT | O_EXCL , 0666)) < 0){
 		perror("Problem with creating temporary file in generate_before_file");
 		return -1;
 	}
-
 	xt->set_fd(xt, fd);
 	xt->load_file(xt);
 	int lines = 20;	
+
 	line_id current_id = xt->get_first_line(xt);
 	xt->set_text(xt, current_id, "aaaa");
 	for(int i = 0; i < lines; i++){
 			current_id = xt->insert_after(xt, current_id, "bbbb");
 	}
 	current_id = xt->insert_after(xt, current_id, "cccc");
+	xt->put_line(xt, current_id);
+	
+	return fd;
+}
 
-	while(current_id != xt->get_first_line(xt)){
+struct traverse_test_data{
+	struct text *xt;
+	int res;
+	int i;
+};
+
+void *traverse_test(void *p)
+{			
+	printf("Starting test thread %d\n", ((struct traverse_test_data *)p)->i);
+	struct text *xt = ((struct traverse_test_data *)p)->xt;
+	line_id end = xt->get_last_line(xt);
+	line_id start = xt->get_first_line(xt); 
+	line_id current_id = xt->get_line(xt, end);
+	while(current_id != start){
 		current_id = xt->prev_line(xt, current_id);
 	}
 
 	if(strcmp("aaaa", xt->get_text(xt, current_id))){
-		return -1;
+		((struct traverse_test_data *)p)->res = -1;
+		return 0;
 	}
 
-	while(current_id != xt->get_last_line(xt)){
+	while(current_id != end){
 		current_id = xt->next_line(xt, current_id);
 	}
 
 	if(strcmp("cccc", xt->get_text(xt, current_id))){
-		return -1;
+		((struct traverse_test_data *)p)->res = -1;
+		return 0;
 	}
 
+	xt->put_line(xt, current_id);
+	xt->put_line(xt, end);
+	xt->put_line(xt, start);
+
+	((struct traverse_test_data *)p)->res = 0;
+
 	return 0;
+}
+
+int check_refcount(struct text *xt)
+{
+	printf("Checking For Reference Count of Zero\n");
+	if(basic_refcount_zero(xt) < 0){
+		printf("Lines with non-zero refcounts!\n");
+		return -1;
+	} else {
+		printf("All lines have zero references\n");
+		return 0;
+	}
 }
 
 int compare_files(int fda, int fdb)
@@ -203,7 +241,7 @@ int main()
 	/* Basic Load and Save Test */
 	printf("Starting Basic Load And Save Test\n");
 	int lines;
-	int fd = generate_file(1, &lines);	
+	int fd = generate_file(RAND1, &lines);	
 	int fd_save;
 	if((fd_save = open(TEST_FILE_NAME_SAVE, O_RDWR | O_CREAT | O_EXCL , 0666)) < 0){
 		perror("Problem with creating temporary save file");
@@ -224,6 +262,7 @@ int main()
 	} else {
 		printf("Passed basic load and save test\n");
 	}
+	check_refcount(xt);
 	xt->unload_file(xt);
 	unlink(TEST_FILE_NAME_SAVE);
 	unlink(TEST_FILE_NAME);
@@ -231,7 +270,7 @@ int main()
 	/* Insert Test 1*/		
 	printf("Starting Insert Test 1\n");
 	int fd_in[2];
-	generate_after_file(1, xt, fd_in);
+	generate_after_file(RAND2, xt, fd_in);
 	if(!xt->is_dirty(xt)){
 		printf("Failed insertion test 1: dirty bit not set!\n");
 		return 1;
@@ -243,10 +282,11 @@ int main()
 	} else {
 		printf("Passed insertion test 1!\n");
 	}
+	check_refcount(xt);
 	xt->unload_file(xt);
 	unlink(TEST_FILE_NAME_SAVE);
 	unlink(TEST_FILE_NAME);
-	
+
 	/* Insert Test 2*/
 	printf("Starting Insert Test 2\n");
 	generate_before_file(1, xt, fd_in);
@@ -261,18 +301,35 @@ int main()
 	} else {
 		printf("Passed insertion test 2!\n");
 	}
+	check_refcount(xt);
 	xt->unload_file(xt);
 	unlink(TEST_FILE_NAME_SAVE);
 	unlink(TEST_FILE_NAME);
 
 	/* Traverse Test */
 	printf("Starting Traverse Test\n");
-	if(traverse_test(xt) < 0){
-		printf("Failed traverse test!\n");
-		return 1;
-	} else {
-		printf("Passed traverse test!\n");
+	generate_traverse_file(xt);	
+	struct traverse_test_data tt_data[THREADS_NUM];
+	pthread_t tt_threads[THREADS_NUM];
+	for(int i = 0; i < THREADS_NUM; i++){
+		tt_data[i].xt = xt;
+		tt_data[i].i = i;
+		pthread_create(tt_threads + i, NULL, traverse_test, (void *)(tt_data + i));
 	}
+	for(int i = 0; i < THREADS_NUM; i++){
+		pthread_join(tt_threads[i], NULL);
+	}
+	int tmp = 0;
+	for(int i = 0; i < THREADS_NUM; i++){
+		if(tt_data[i].res < 0)
+			tmp = -1;
+	}
+	if(tmp < 0){
+		printf("Failed Traverse Test!\n");	
+	} else {
+		printf("Passed Traverse Test!\n");	
+	}
+	check_refcount(xt);
 	unlink(TEST_FILE_NAME);
 
 	return 0;

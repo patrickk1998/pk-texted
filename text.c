@@ -38,6 +38,20 @@ static int bxt_get_total_lines(struct text *xt)
 	return bxt->total_lines;
 }
 
+/* Reference counting */
+
+static line_id inc_ref(line_id l_id){
+	struct line *l = (struct line *)l_id;
+	l->refcount++;
+	return l_id;
+}
+
+static line_id dec_ref(line_id l_id){
+	struct line *l = (struct line *)l_id;
+	l->refcount--;
+	return l_id;
+}
+
 /* Load and Save */
 
 // For now assume that all characters – glphys, letters, tabs – are one byte.
@@ -53,7 +67,7 @@ static struct line *make_line(int width)
 	// width + 1 so all strings are null terminated.
 	l->text = (char *)malloc(width + 1);
 	memset(l->text, 0 , width + 1);
-	l->id = (long)l;
+	l->id = (void *)l;
 	return l;
 }
 
@@ -129,19 +143,20 @@ static void bxt_unload_file(struct text *xt)
 static line_id bxt_get_first_line(struct text *xt)
 {
 	struct basic_text *bxt = GET_BXT(xt);
-	return bxt->head->id;
+	return inc_ref(bxt->head->id);
 }
 
 static line_id bxt_get_last_line(struct text *xt)
 {
 	struct basic_text *bxt = GET_BXT(xt);
-	return bxt->tail->id;
+	return inc_ref(bxt->tail->id);
 }
 
 static line_id bxt_next_line(struct text *xt, line_id id)
 {	
+	dec_ref(id);	
 	if(((struct line *)id)->next){
-		return ((struct line *)id)->next->id;
+		return inc_ref(((struct line *)id)->next->id);	
 	} else {
 		return 0;
 	}
@@ -149,8 +164,9 @@ static line_id bxt_next_line(struct text *xt, line_id id)
 
 static line_id bxt_prev_line(struct text *xt, line_id id)
 {
+	dec_ref(id);	
 	if(((struct line *)id)->prev){
-		return ((struct line *)id)->prev->id;
+		return inc_ref(((struct line *)id)->prev->id);	
 	} else {
 		return 0;
 	}
@@ -196,7 +212,7 @@ static line_id bxt_delete_line(struct text *xt, line_id id)
 	line_id new_id = line->prev->id;
 	free_line(line);
 	bxt->dirty = 1;
-	return new_id;
+	return inc_ref(new_id);
 }
 
 static line_id bxt_insert_after(struct text *xt, line_id id, char *str)
@@ -216,7 +232,8 @@ static line_id bxt_insert_after(struct text *xt, line_id id, char *str)
 	new_line->prev = line;
 	bxt->dirty = 1;
 	bxt->total_lines++;
-	return new_line->id;
+	dec_ref(id);
+	return inc_ref(new_line->id);
 }
 
 static line_id bxt_insert_before(struct text *xt, line_id id, char *str)
@@ -236,7 +253,18 @@ static line_id bxt_insert_before(struct text *xt, line_id id, char *str)
 	new_line->next = line;
 	bxt->dirty = 1;
 	bxt->total_lines++;
-	return new_line->id;
+	dec_ref(id);
+	return inc_ref(new_line->id);
+}
+
+static line_id bxt_get_line(struct text *xt, line_id id)
+{
+	return inc_ref(id);
+}
+
+static void bxt_put_line(struct text *xt, line_id id)
+{
+	dec_ref(id);
 }
 
 struct text *make_basic_text(struct basic_text *bxt)
@@ -258,5 +286,20 @@ struct text *make_basic_text(struct basic_text *bxt)
 	bxt->super.insert_before =  bxt_insert_before;
 	bxt->super.get_text = bxt_get_text;
 	bxt->super.set_text = bxt_set_text;
+	bxt->super.get_line = bxt_get_line;
+	bxt->super.put_line = bxt_put_line;
 	return &(bxt->super);	
+}
+
+int basic_refcount_zero(struct text *xt)
+{
+		struct basic_text *bxt = GET_BXT(xt); 
+		struct line *current_line = (struct line *)bxt->head;
+		do{
+			if(current_line->refcount != 0)
+				return -1;
+			current_line = (struct line *)current_line->next;		
+		}while(current_line != bxt->tail);
+		
+		return 0;
 }
