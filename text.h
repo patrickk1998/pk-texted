@@ -8,7 +8,6 @@ typedef void *line_id;
 
 /* Generic Text Interface */
 
-
 /*
 		** Reference counting ** 
 
@@ -55,6 +54,22 @@ typedef void *line_id;
 		assert(start_line_old == start_line_new); <-- May fail.
 */
 
+/*      ** Null Values **
+		
+		The next_line() and prev_line() are the two functions that can return null values for line_id. A null 
+		value for line_id signifies a position past the last line or before the first line. The only function
+		can take a null value for a line_id is put_line() and get_line().
+
+		The following example iterates through every line:
+
+		line_id current_line = xt->get_first_line(xt);
+		while(current_line != NULL){
+			DO SOMETHING...
+			current_line = xt->next_line(xt, current_line);
+		}
+		xt->put_line(current_line);
+*/
+
 struct text{
 	void (*set_row_width)(struct text *, int);
 	int (*get_row_width)(struct text *);
@@ -74,6 +89,7 @@ struct text{
 	line_id (*get_line)(struct text *, line_id);
 	void (*put_line)(struct text *, line_id);
 	const char *(*get_text)(struct text *, line_id);	
+	int (*length)(struct text *, line_id);
 	void (*set_text)(struct text *, line_id, char *);
 };
 

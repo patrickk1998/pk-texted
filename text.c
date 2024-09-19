@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <assert.h>
 
 #define GET_BXT(s) (struct basic_text*)((char *)s - offsetof(struct basic_text, super));
 
@@ -155,33 +156,46 @@ static line_id bxt_get_last_line(struct text *xt)
 
 static line_id bxt_next_line(struct text *xt, line_id id)
 {	
+	assert(id != NULL);	
+	if(id == NULL){
+		return NULL;
+	}	
 	dec_ref(id);	
 	if(((struct line *)id)->next){
 		return inc_ref(((struct line *)id)->next->id);	
 	} else {
-		return 0;
+		return NULL;
 	}
 }
 
 static line_id bxt_prev_line(struct text *xt, line_id id)
 {
+	assert(id != NULL);	
 	dec_ref(id);	
 	if(((struct line *)id)->prev){
 		return inc_ref(((struct line *)id)->prev->id);	
 	} else {
-		return 0;
+		return NULL;
 	}
 }
 
-static const char *bxt_get_text(struct text *xt, line_id line)
+static const char *bxt_get_text(struct text *xt, line_id id)
 {
-	return ((struct line *)line)->text;
+	assert(id != NULL);	
+	return ((struct line *)id)->text;
 }
 
-static void bxt_set_text(struct text *xt, line_id line, char *str)
+static int bxt_length(struct text *xt, line_id id)
 {
+	assert(id != NULL);	
+	return ((struct line *)id)->len;
+}
+
+static void bxt_set_text(struct text *xt, line_id id, char *str)
+{
+	assert(id != NULL);	
 	struct basic_text *bxt = GET_BXT(xt); 
-	struct line *l = (struct line*)line;
+	struct line *l = (struct line*)id;
 	l->len =  stpncpy(l->text, str, bxt->row_width) - l->text;
 	bxt->dirty = 1;
 }
@@ -190,6 +204,7 @@ static void bxt_set_text(struct text *xt, line_id line, char *str)
 
 static line_id bxt_delete_line(struct text *xt, line_id id)
 {
+	assert(id != NULL);	
 	struct basic_text *bxt = GET_BXT(xt); 
 	struct line *line = (struct line *)id;
 	// Delete nothing if this is the only line.
@@ -218,6 +233,7 @@ static line_id bxt_delete_line(struct text *xt, line_id id)
 
 static line_id bxt_insert_after(struct text *xt, line_id id, char *str)
 {
+	assert(id != NULL);	
 	struct basic_text *bxt = GET_BXT(xt); 
 	struct line *line = (struct line *)id;
 	struct line *new_line = make_line(bxt->row_width);			
@@ -239,6 +255,7 @@ static line_id bxt_insert_after(struct text *xt, line_id id, char *str)
 
 static line_id bxt_insert_before(struct text *xt, line_id id, char *str)
 {
+	assert(id != NULL);	
 	struct basic_text *bxt = GET_BXT(xt); 
 	struct line *line = (struct line *)id;
 	struct line *new_line = make_line(bxt->row_width);			
@@ -260,12 +277,16 @@ static line_id bxt_insert_before(struct text *xt, line_id id, char *str)
 
 static line_id bxt_get_line(struct text *xt, line_id id)
 {
-	return inc_ref(id);
+	if(id != NULL)
+		return inc_ref(id);
+	else
+		return NULL;	
 }
 
 static void bxt_put_line(struct text *xt, line_id id)
 {
-	dec_ref(id);
+	if(id != NULL)
+		dec_ref(id);
 }
 
 struct text *make_basic_text(struct basic_text *bxt)
@@ -287,6 +308,7 @@ struct text *make_basic_text(struct basic_text *bxt)
 	bxt->super.insert_before =  bxt_insert_before;
 	bxt->super.get_text = bxt_get_text;
 	bxt->super.set_text = bxt_set_text;
+	bxt->super.length = bxt_length;
 	bxt->super.get_line = bxt_get_line;
 	bxt->super.put_line = bxt_put_line;
 	return &(bxt->super);	
