@@ -3,45 +3,36 @@
 #include <ctype.h>
 #include <string.h>
 
-static enum input_type escape_handle();
+static enum input_type escape_handle(char *);
 
 void get_action(struct input_action *new_action)
 {
-	char b;
-	while( read(STDIN_FILENO, &b, 1) ){
-		//if(to_debug) dprintf(STDERR_FILENO, "Key is %d", (int)b);
-		if(b == ('q' & 0x1f)){
-			new_action->type = quit;
-			break;
-		}
-		if(b == '\033'){
-			new_action->type = escape_handle();
-			break;
-		}
-		if(b == 127){
-			new_action->type = backspace;
-			break;
-		}
-		if(isgraph(b) || isblank(b)){
-			new_action->type = insert;
-			new_action->value = b;
-			break;
-		}
-		if(b == 13){
-			new_action->type = creturn;
-			break;
-		}
+	char b[3];
+	int len = read(STDIN_FILENO, &b, 4);
+	if(b[0] == ('q' & 0x1f)){
+		new_action->type = quit;
 	}
-
-/*	if(to_debug)
-		dprintf(STDERR_FILENO,"Action is %d\n", new_action->type); */
+	if(b[0] == '\033'){
+		if(len == 1)
+			new_action->type = escape;
+		else 
+			new_action->type = escape_handle(b+1);
+	}
+	if(b[0] == 127){
+		new_action->type = backspace;
+	}
+	if(isgraph(b[0]) || isblank(b[0])){
+		new_action->type = insert;
+		new_action->value = b[0];
+	}
+	if(b[0] == 13){
+		new_action->type = creturn;
+	}
 }
 
-enum input_type escape_handle()
+enum input_type escape_handle(char *buf)
 {
 	enum input_type action = noop;
-	char buf[4]; 
-	read(STDIN_FILENO, buf, 3);
 	if(!strncmp(buf,"[A",2)){
 		action = up;
 		goto end;

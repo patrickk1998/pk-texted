@@ -1,4 +1,4 @@
-/* INPUT FUNCTIONS */ /* <-- Not tested, but look okay */
+/* INPUT FUNCTIONS */ 
 
 #ifndef INPUT_H
 #define INPUT_H
@@ -14,6 +14,7 @@ enum input_type{
 	backspace,
 	insert,
 	creturn,
+	escape,
 };
 
 struct input_action{
