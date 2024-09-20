@@ -6,8 +6,9 @@
 #include <string.h>
 #include <pthread.h>
 
-#define TEST_FILE_NAME ".pktexted_test_file"
-#define TEST_FILE_NAME_SAVE ".pktexted_test_file_save"
+#define TEST_FILE_NAME ".test_file"
+#define TEST_FILE_NAME_SAVE ".test_file_save"
+#define EXAMPLE_1 "text/example1"
 #define TEST_FILE_LINES 500
 #define TEST_LINE_LEN 80
 #define THREADS_NUM 20
@@ -62,8 +63,7 @@ int generate_file(int seed, int *l)
 	for(int i = 0; i < lines; i++){
 		random_line();	
 		write(fd, rand_buf, rand_buf_len);
-		if((i+1) != lines)
-			write(fd, "\n", 1);
+		write(fd, "\n", 1);
 	}
 
 	lseek(fd, 0, SEEK_SET);
@@ -93,8 +93,7 @@ int generate_after_file(int seed, struct text *xt, int *fd)
 		xt->set_text(xt, current_id, rand_buf);
 		if((i+1) != lines)
 			current_id = xt->insert_after(xt, current_id, "a");
-		if((i+1) != lines)
-			write(fd[0], "\n", 1);
+		write(fd[0], "\n", 1);
 	}
 	xt->put_line(xt, current_id);
 
@@ -117,8 +116,7 @@ int generate_before_file(int seed, struct text *xt, int *fd)
 	int lines = (rand() % TEST_FILE_LINES);
 	for(int i = 0; i < lines; i++){
 		write(fd[0], "aaaa", 4);
-		if((i+1) != lines)
-			write(fd[0], "\n", 1);
+		write(fd[0], "\n", 1);
 	}
 
 	xt->set_fd(xt, fd[1]);
@@ -272,6 +270,9 @@ int main()
 	printf("Starting Basic Load And Save Test\n");
 	int lines;
 	int fd = generate_file(RAND1, &lines);	
+	if(fd < 0){
+		return 1;
+	}
 	int fd_save;
 	if((fd_save = open(TEST_FILE_NAME_SAVE, O_RDWR | O_CREAT | O_EXCL , 0666)) < 0){
 		perror("Problem with creating temporary save file");
@@ -280,6 +281,7 @@ int main()
 	xt->set_row_width(xt, TEST_LINE_LEN);
 	xt->set_fd(xt, fd);
 	xt->load_file(xt);
+
 	if(xt->get_total_lines(xt) != lines){
 		printf("Number of loaded lines does not match: %d vs %d!\n", xt->get_total_lines(xt), lines);
 		return 1;
@@ -296,6 +298,31 @@ int main()
 	xt->unload_file(xt);
 	unlink(TEST_FILE_NAME_SAVE);
 	unlink(TEST_FILE_NAME);
+
+	/* EXAMPLE *1 */
+	printf("Starting Example 1\n");
+	fd = open(EXAMPLE_1, O_RDONLY);
+	if(fd < 0){
+		return -1;
+	}
+	xt->set_fd(xt, fd);
+	xt->load_file(xt);
+	if((fd_save = open(TEST_FILE_NAME_SAVE, O_RDWR | O_CREAT | O_EXCL , 0666)) < 0){
+		perror("Problem with creating temporary save file");
+		return 1;
+	}	
+	xt->set_fd(xt, fd_save);	
+	xt->save_file(xt);
+	if(compare_files(fd, fd_save) < 0){
+		printf("Failed basic load and save test\n");
+		return 1;
+	} else {
+		printf("Passed basic load and save test\n");
+	}
+	check_refcount(xt);
+	xt->unload_file(xt);
+	unlink(TEST_FILE_NAME_SAVE);
+	close(fd);
 
 	/* Insert Test 1*/		
 	printf("Starting Insert Test 1\n");

@@ -86,9 +86,11 @@ static void bxt_load_file(struct text *xt)
 	struct line *current = make_line(bxt->row_width);
 	bxt->head = current;
 	char c;
+	char last_c = 0;
 	int c_size, l_size = 0;
 	lseek(bxt->fd, 0, SEEK_SET);
 	while((c_size = next_character(bxt->fd, &c))){
+		last_c = c;
 		if(c == '\n' || l_size >= bxt->row_width){
 			current->len = l_size;
 			struct line *n = make_line(bxt->row_width);
@@ -105,6 +107,11 @@ static void bxt_load_file(struct text *xt)
 	}
 	current->len = l_size;
 	bxt->tail = current;		
+	
+	// This is hear to allow reading and writing text files with not ending \n character.
+	if(last_c == '\n'){
+		xt->delete_line(xt, current->id);
+	}
 }
 
 static void bxt_save_file(struct text *xt)
@@ -116,10 +123,8 @@ static void bxt_save_file(struct text *xt)
 	while(current){
 		write(bxt->fd, current->text, current->len);
 		file_len = file_len + current->len;	
-		if(current->next){
-			write(bxt->fd, "\n", 1);
-			file_len++;
-		}
+		write(bxt->fd, "\n", 1);
+		file_len++;
 		current = current->next;
 	}
 	ftruncate(bxt->fd, file_len);
@@ -211,20 +216,25 @@ static line_id bxt_delete_line(struct text *xt, line_id id)
 	if(line->prev == NULL && line->next == NULL){
 		return id;
 	}
+
 	bxt->total_lines--;
+
+	// When line is head.
 	if(line->prev == NULL){
 		line->next->prev = NULL;
 		bxt->head = line->next;
-		return bxt->head->id;
+		free_line(line);
+		return inc_ref(bxt->head->id);
+	}
+
+	
+	if(line->next == NULL){
+		bxt->tail = line->prev; // Line is tail.
 	} else {
 		line->next->prev = line->prev;
 	}
-
-	if(line->next == NULL){
-		line->prev = NULL;
-	} else {
-		line->prev->next = line->next;
-	}
+	
+	line->prev->next = line->next;
 	line_id new_id = line->prev->id;
 	free_line(line);
 	bxt->dirty = 1;
