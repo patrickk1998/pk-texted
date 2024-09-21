@@ -44,9 +44,10 @@ void write_action(int fd, struct input_action *action)
 		write(fd, "\033[D", 3);	
 		break;
 	case creturn:
-		w = 13;
-		write(fd, &w, 1);
+		write(fd, "\015", 1);
 		break;
+	case escape:
+		write(fd, "\033", 1);
 	}
 }
 
@@ -82,10 +83,14 @@ int main()
 	ADD_TYPE(backspace);
 	ADD_TYPE(creturn);
 	ADD_TYPE(creturn);
+	ADD_TYPE(escape);
+	ADD_INSERT('z');
+	ADD_TYPE(quit);
 	ADD_INSERT('z');
 	ADD_INSERT('y');
 	ADD_INSERT('x');
 	ADD_TYPE(backspace);
+	ADD_TYPE(escape);
 	ADD_INSERT('w');
 	ADD_TYPE(creturn);
 	ADD_TYPE(down);
