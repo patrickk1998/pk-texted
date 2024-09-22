@@ -22,9 +22,11 @@ int main(int argc, char* argv[])
 	// should be connected to the same tty.
 	ttyd.fd = STDIN_FILENO; 
 	struct display *dis = make_tty_display(&ttyd);		
-	int w, h;
+	//int w, h;
+	int w = 0;
+	int h = 0;
 	dis->open_display(dis, &w, &h);	
-	
+
 	/* Open File */
 	struct basic_text bxt;
 	struct text *xt = make_basic_text(&bxt);
@@ -39,21 +41,22 @@ int main(int argc, char* argv[])
 
 	/* Make State */
 	struct displayState state;
-	makeState(&state, xt, h);
-	renderState(&state, dis);
+	make_state(&state, xt, h, w);
+	render_state(&state, dis);
 
 	struct input_action action;
 	while(1){
 		get_action(&action);
-		//update_state(&action, &state);
 		if(action.type == quit){
 			break;
-		} else {
-			continue;
 		}
-		//render_state(dis, &state);
+		if(action.type != noop)
+			update_state(&state, &action);
+		render_state(&state, dis);
 	}
 	
 	dis->close_display(dis);
+	printf("cursor %d\n", state.cursorRow);
+	printf("total lines %d\n", xt->get_total_lines(xt));
 	return 0;
 }
