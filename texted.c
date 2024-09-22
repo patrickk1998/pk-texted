@@ -15,6 +15,18 @@
 
 /* Functions for Line to row Mappings */
 
+int get_width(char c)
+{
+	return 1;
+}
+
+int	col_of_char(struct text *xt, _rowmap *rowmap, int i, int width)
+{
+	assert(i <= rowmap->width);
+	return i;
+}
+
+
 int get_height(struct text *xt, line_id line, int width){
 	int h = 1;
 	int i = 0;
@@ -22,8 +34,8 @@ int get_height(struct text *xt, line_id line, int width){
 	const char *text =  xt->get_text(xt, line);
 	while(text[i] != '\0'){	
 		i++;
-		l++;
-		if( l == width ){
+		l += get_width(text[i]);
+		if( l >= width ){
 			h++;
 			l = 0;
 		}
@@ -34,6 +46,7 @@ int get_height(struct text *xt, line_id line, int width){
 int set_rowmap(struct text *xt, _rowmap *rowmap, int width){
 	assert(rowmap->index < get_height(xt, rowmap->line, width));
 	int j = 0;
+	int w = 0;
 	const char *text = xt->get_text(xt, rowmap->line);
 	for(int i = rowmap->index*width; i < (rowmap->index+1)*width; i++){
 		if(text[i] == '\0')
@@ -196,21 +209,55 @@ void update_cursor(struct displayState *s, command *c)
 {
 	switch(c->direction){
 		case move_up:
-			if(s->cursorRow != 0)
+			if(s->cursorRow != 0){
 				s->cursorRow--;
+				goto check_column;
+			}
 			break;
 		case move_down:
-			if(s->cursorRow != (s->viewRows - 1))
+			if(s->row_mapping[s->cursorRow+1].line != NULL ){
 				s->cursorRow++;
+				goto check_column;
+			}	
 			break;
 		case move_left:
-			if(s->cursorColumn != 0)
-				s->cursorColumn--;
+			if(s->cursorCharacter != 0){
+				s->csaved = 0;
+				s->cursorCharacter--;
+				goto update_column;
+			}
 			break;
 		case move_right:
-			s->cursorColumn++;
+			if(s->cursorCharacter < s->row_mapping[s->cursorRow].width){
+				s->csaved = 0;
+				s->cursorCharacter++;
+				goto update_column;	
+			} 
 			break;
 	}
+
+	return;
+
+	check_column:
+	if(!s->csaved && s->cursorCharacter > s->row_mapping[s->cursorRow].width){
+		if(!s->csaved){
+			s->savedCursorCharacter = s->cursorCharacter;
+			s->csaved = 1;
+		}
+		s->cursorCharacter = s->row_mapping[s->cursorRow].width;
+	}
+	if(s->csaved){
+		if(s->savedCursorCharacter <= s->row_mapping[s->cursorRow].width){
+			s->csaved = 0;
+			s->cursorCharacter = s->savedCursorCharacter;
+		} else {
+			s->cursorCharacter = s->row_mapping[s->cursorRow].width;
+		}
+	}
+
+	update_column:
+	s->cursorColumn = col_of_char(s->xt, &s->row_mapping[s->cursorRow],
+					s->cursorCharacter, s->width);
 }
 
 void update_state(struct displayState *s, struct input_action *a)
@@ -250,7 +297,7 @@ void render_state(struct displayState *s, struct display *dis)
 				break;
 		}
 		dis->display_line(dis, s->rows - 1);
-		s->changed_control;
+		s->changed_control = 0;
 	}
 
 	dis->set_cursor(dis, s->cursorRow, s->cursorColumn);

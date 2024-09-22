@@ -45,7 +45,8 @@ struct _rowmap{
 	int index;
 	int width;
 	int changed;
-	char *text;
+	// char* text stores tab subsituted text ready to put into the display.
+	char *text;  
 };
 
 typedef struct _rowmap _rowmap;
@@ -53,6 +54,9 @@ typedef struct _rowmap _rowmap;
 // The displayed text area is [start, end) 
 struct displayState{
 	int cursorRow;
+	int cursorCharacter;
+	int savedCursorCharacter;
+	int csaved;
 	int cursorColumn;
 	int endRow;
 	char *changed;
