@@ -10,17 +10,28 @@ int main(int argc, char* argv[])
 {
 	char default_file_name[] = "text/example1";
 	char *file_name;
+	char *tty_name = "\0";
 	if(argc < 2)
 		file_name = default_file_name;
 	else 
 		file_name = argv[1];
+	
+	if(argc > 2)
+		tty_name = argv[2];	
 	
 
 	/* Intializing Display Object and Render */
 	struct tty_display ttyd;	
 	// Does not really matter if standard in or standard out as both 
 	// should be connected to the same tty.
-	ttyd.fd = STDIN_FILENO; 
+	if(tty_name[0] == '\0'){
+		ttyd.fd = STDIN_FILENO; 
+	} else {
+		if((ttyd.fd = open(tty_name, O_RDWR)) < 0){
+			perror("Problem opening tty device");
+			return 1;
+		}
+	}
 	struct display *dis = make_tty_display(&ttyd);		
 	//int w, h;
 	int w = 0;
@@ -46,7 +57,7 @@ int main(int argc, char* argv[])
 
 	struct input_action action;
 	while(1){
-		get_action(&action);
+		get_action(&action, ttyd.fd);
 		if(action.type == quit){
 			break;
 		}

@@ -22,6 +22,6 @@ struct input_action{
 	char value;
 };
 
-void get_action(struct input_action *);
+void get_action(struct input_action *, int fd);
 
 #endif /* INPUT_H */

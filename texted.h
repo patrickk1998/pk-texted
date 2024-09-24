@@ -64,11 +64,14 @@ struct displayState{
 	int rows;
 	int width;
 	int viewRows; // Bottom row is command line, so viewRows = rows - 1;
+	int lowestView; // Lowest row where text is displayed.
 	line_id start;
 	line_id end;
 	enum _mode mode;
 	int changed_control;
 	struct _rowmap *row_mapping;	
+	_rowmap candidate_rowmap;
+	int scrolled;
 };
 
 // event loop, read from input and update data; return after that.

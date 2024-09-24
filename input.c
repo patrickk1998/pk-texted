@@ -5,10 +5,10 @@
 
 static enum input_type escape_handle(char *);
 
-void get_action(struct input_action *new_action)
+void get_action(struct input_action *new_action, int fd)
 {
 	char b[3];
-	int len = read(STDIN_FILENO, &b, 4);
+	int len = read(fd, &b, 4);
 	if(b[0] == ('q' & 0x1f)){
 		new_action->type = quit;
 	}
