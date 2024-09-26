@@ -31,13 +31,7 @@ struct display{
 
 /*
 	TTY DISPLAY
-	assume one character is one column unit wide for now.
 */
-
-#define HIDE_CURSOR() write(STDOUT_FILENO,"\e[?25l",6)
-#define SHOW_CURSOR() write(STDOUT_FILENO,"\e[?25h",6)
-#define CLEAR_SCREEN() write(STDOUT_FILENO,"\e[2J",4)
-#define ALT_BUFFER() write(STDOUT_FILENO,"\e[?1049h",8);
 
 struct tty_display{
 	struct termios termset_orig;
@@ -49,6 +43,7 @@ struct tty_display{
 	int cursor_row;
 	int cursor_col;
 	struct display super;
+	// Original windows size to restore scroll window.
 	int scrollwin_og[2];
 };
 
