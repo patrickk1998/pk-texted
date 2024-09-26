@@ -8,6 +8,9 @@
 #include <signal.h>
 #include "display.h"
 
+#define GET_TTYD(super) (struct tty_display *)((char *)super - offsetof(struct tty_display, super));	
+
+
 // Want to avoid global variables, but no other
 // choice for SIGWINCH handler.
 struct resize_event *pproc_resize_callback; 
@@ -40,6 +43,37 @@ static void clear_line(int fd)
 static void clear_screen(int fd)
 {
 	write(fd,"\e[2J",4);
+}
+
+// Scroll Down and Up are reversed from xterm documentation.
+static void scroll_down(int fd)
+{
+	write(fd, "\e[1S",4);
+}
+
+static void scroll_up(int fd)
+{
+	write(fd, "\e[1T",4);
+}
+
+static void tty_scroll_down(struct display *super)
+{
+	struct tty_display *ttyd = (struct tty_display *)((char *)super - offsetof(struct tty_display, super));	
+	scroll_down(ttyd->fd);
+}
+
+static void tty_scroll_up(struct display *super)
+{
+	struct tty_display *ttyd = (struct tty_display *)((char *)super - offsetof(struct tty_display, super));	
+	scroll_up(ttyd->fd);
+}
+
+static void tty_set_scroll_window(struct display *super, int top_row, int bot_row)
+{
+	struct tty_display *ttyd = GET_TTYD(super);
+	char buf[32];
+	int l = sprintf(buf,"\e[%d;%dr", top_row, bot_row);
+	write(ttyd->fd, buf, l);
 }
 
 static void disable_raw(struct termios *termset_orig, int fd)
@@ -112,6 +146,8 @@ static int tty_open_display(struct display *super, int *width, int *height)
 	*height = ws.ws_row;
 	*width = ws.ws_col;
 	allocate_buffers(ttyd);	
+	ttyd->scrollwin_og[0] = 0;
+	ttyd->scrollwin_og[1] = ws.ws_row;
 
 	enable_raw(&(ttyd->termset_orig), ttyd->fd);
 	enable_alt_buffer(ttyd->fd);
@@ -128,6 +164,7 @@ static int tty_open_display(struct display *super, int *width, int *height)
 static void tty_close_display(struct display *super)
 {
 	struct tty_display *ttyd = (struct tty_display *)((char *)super - offsetof(struct tty_display, super));	
+	super->set_scroll_window(super, ttyd->scrollwin_og[0], ttyd->scrollwin_og[1]); 
 	free(ttyd->buffer);
 	disable_raw(&ttyd->termset_orig, ttyd->fd);
 	disable_alt_buffer(ttyd->fd);
@@ -196,5 +233,8 @@ struct display *make_tty_display(struct tty_display *ttyd)
 	ttyd->super.display_line = tty_display_line;
 	ttyd->super.get_size = tty_get_size;
 	ttyd->super.clear_display = tty_clear_display;
+	ttyd->super.scroll_up = tty_scroll_up;
+	ttyd->super.scroll_down = tty_scroll_down;
+	ttyd->super.set_scroll_window = tty_set_scroll_window;
 	return &(ttyd->super);
 }

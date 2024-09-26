@@ -71,7 +71,11 @@ struct displayState{
 	int changed_control;
 	struct _rowmap *row_mapping;	
 	_rowmap candidate_rowmap;
-	int scrolled;
+	enum {
+		scrolled_no,
+		scrolled_up,
+		scrolled_down,
+	} scrolled;
 };
 
 // event loop, read from input and update data; return after that.

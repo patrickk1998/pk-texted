@@ -23,6 +23,9 @@ struct display{
 	void (*get_size)(struct display *, int *, int *);
 	void (*clear_display)(struct display *);
 	void (*clear_line)(struct display *, int);
+	void (*scroll_up)(struct display *);
+	void (*scroll_down)(struct display *);
+	void (*set_scroll_window)(struct display *, int, int);
 	struct resize_event *resize_callback;
 };
 
@@ -46,6 +49,7 @@ struct tty_display{
 	int cursor_row;
 	int cursor_col;
 	struct display super;
+	int scrollwin_og[2];
 };
 
 struct display *make_tty_display(struct tty_display *);

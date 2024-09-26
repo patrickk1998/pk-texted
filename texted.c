@@ -100,7 +100,6 @@ void replace_rowmap(struct displayState *s, _rowmap *old_rowmap, _rowmap *new_ro
 	old_rowmap->line = s->xt->get_line(s->xt, new_rowmap->line);
 	old_rowmap->index = new_rowmap->index;
 	old_rowmap->width = new_rowmap->width;
-	old_rowmap->changed = 1;
 	int i = -1;
 	do{
 		i++;
@@ -118,6 +117,9 @@ int scroll_up(struct displayState *s)
 	}
 
 	replace_rowmap(s, &s->row_mapping[0], &s->candidate_rowmap); 
+
+	s->row_mapping[0].changed = 1;
+	s->scrolled = scrolled_up;
 	
 	return 0;
 }
@@ -133,6 +135,8 @@ int scroll_down(struct displayState *s)
 
 	replace_rowmap(s, &s->row_mapping[s->lowestView], &s->candidate_rowmap); 
 	
+	s->row_mapping[s->lowestView].changed = 1;
+	s->scrolled = scrolled_down;
 	return 0;
 }
 
@@ -144,7 +148,8 @@ void make_state(struct displayState *s, struct text *xt, int h, int w)
 	s->width = w;
 	s->changed = malloc(s->rows);
 	s->mode = normal_mode;
-	s->scrolled = 0;
+	s->scrolled = scrolled_no;
+	
 
 	s->candidate_rowmap.text = (char *)malloc(s->width+1);
 	s->candidate_rowmap.line = NULL;
@@ -175,6 +180,7 @@ void make_state(struct displayState *s, struct text *xt, int h, int w)
 		if(j == (s->viewRows - 1))
 			break;
 	} 
+	s->row_mapping[j].changed = 1;
 	s->lowestView = j;
 
 	s->cursorRow = 0;
@@ -358,10 +364,13 @@ void render_state(struct displayState *s, struct display *dis)
 	int always_render = 0;
 	
 	// This is to fix jitter when scrolling.
-	if(s->scrolled){
-		s->scrolled = 0;
-		always_render = 0;
-		dis->clear_display(dis);
+	if(s->scrolled != scrolled_no){
+		dis->set_scroll_window(dis, 0, s->lowestView+1);
+		if(s->scrolled == scrolled_up)
+			dis->scroll_up(dis); // names may be flipped;
+		else 
+			dis->scroll_down(dis);
+		s->scrolled = scrolled_no;
 	}
 
 	for(int i = 0; i < s->viewRows; i++){
