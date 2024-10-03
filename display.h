@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <sys/ioctl.h>
 #include <termios.h>
+#include "codepoint.h"
 
 #ifndef DISPLAY_H
 #define DISPLAY_H
@@ -17,7 +18,7 @@ struct resize_event{
 struct display{
 	int  (*open_display)(struct display *, int *, int *);
 	void (*close_display)(struct display *);
-	void (*put_line)(struct display *, const char *, int);
+	void (*put_line)(struct display *, const codepoint *, int);
 	void (*display_line)(struct display*, int);
 	void (*set_cursor)(struct display *, int, int);
 	void (*get_size)(struct display *, int *, int *);
@@ -43,6 +44,7 @@ struct tty_display{
 	int cursor_row;
 	int cursor_col;
 	struct display super;
+	enum color current_text_color;
 	// Original windows size to restore scroll window.
 	int scrollwin_og[2];
 };
