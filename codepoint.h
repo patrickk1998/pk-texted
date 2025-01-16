@@ -1,6 +1,12 @@
 #ifndef CODEPOINT_H
 #define CODEPOINT_H
 
+/*
+ *  A codepoint represents not just a utf8 unicode character, but
+ *  Someing that is being displayed on screen, hence is must have 
+ *  properties associated with it like text and higlight color.
+ */
+
 // Subtract 1 from color enum to get ANSI color number.
 enum color{
 	color_default = 0,

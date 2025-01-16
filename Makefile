@@ -46,5 +46,11 @@ codepoint_test.o: codepoint_test.c codepoint.h
 codepoint.o: codepoint.c codepoint.h
 	$(CC) $(CFLAGS) -c codepoint.c
 
+utf8.o: utf8.c utf8.h
+	$(CC) $(CFLAGS) -c utf8.c
+
+span.o: span.c span.h
+	$(CC) $(CFLAGS) -c span.c
+
 clean:
 	rm *.o
