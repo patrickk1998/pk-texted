@@ -3,6 +3,7 @@
 #include "display.h"
 #include "input.h"
 #include "text.h"
+#include "span.h"
 
 #ifndef TEXTED_H
 #define TEXTED_H
@@ -85,6 +86,11 @@ void make_state(struct displayState *s, struct text *xt,  int h, int w);
 void update_state(struct displayState *s, struct input_action *a);
 
 void render_state(struct displayState *s, struct display *dis);
+
+
+/* new span things */
+
+void init_display(struct stext *, struct display *, int h, int w);
 
 #endif /* TEXTED_H */
 

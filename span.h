@@ -1,6 +1,8 @@
 #include "utf8.h"
 
 /* stext interface */
+#ifndef SPAN_H
+#define SPAN_H
 
 //struct stext;
 
@@ -23,6 +25,7 @@ struct stext{
 	void (*put_span)(span *);
 	int  (*grow_span)(span *);
 	utf8 (*peek_span)(span *);		
+	utf8 (*index_span)(span *, int);
 	void (*insert)(span *, int, utf8);
 	void (*del)(span *, int);
 };
@@ -48,3 +51,5 @@ struct _mock_span{
 typedef struct _mock_span mock_span;
 
 struct stext *make_mock_text(struct mock_text *);
+
+#endif /* SPAN_H */

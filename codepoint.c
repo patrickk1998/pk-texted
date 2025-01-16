@@ -3,7 +3,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-int get_length_byte(unsigned char byte)
+static int get_length_byte(unsigned char byte)
 {
 	if(byte <= 0x7f)
 		return 1; // ASCII character. 
@@ -45,6 +45,12 @@ int put_next_codepoint(char *stream, const codepoint *p)
 	for(int i = 0; i < len; i++)
 		stream[i] = p->content[i];	
 	return len;
+}
+
+void codepoint_from_uchar(codepoint *p, utf8 uchar)
+{
+	for(int i = 0; i < utf8_size(uchar); i++)
+		p->content[i] = uchar.x[i];	
 }
 
 codepoint *stocp(const char *str, ...)

@@ -1,4 +1,6 @@
 
+#ifndef UTF8_H
+#define UTF8_H
 
 struct _utf8{
 	char x[4];
@@ -14,3 +16,4 @@ int utf8_compare(utf8, char);
 
 int utf8_empty(utf8);
 
+#endif /* UTF8_H */

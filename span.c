@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <assert.h>
 #include "span.h"
 
 int find_length(char *file)
@@ -29,7 +30,7 @@ char *find_offset(char *file, int index)
 }
 
 #define GET_MOCK(s) (struct mock_text*)((char *)s - offsetof(struct mock_text, super));
-#define	GET_SPAN(s) (struct mock_text*)((char *)s - offsetof(mock_span, super)); 
+#define	GET_SPAN(s) (mock_span*)((char *)s - offsetof(mock_span, super))
 
 void mtx_set_fd(struct stext *s, int fd)
 {
@@ -60,22 +61,31 @@ void mtx_load_file(struct stext *s)
 	mtx->length = find_length(mtx->file);
 }
 
+// span starts offempty, with end == start
 span *mtx_get_span(struct stext *s, int offset)
 {
 	struct mock_text *mtx = GET_MOCK(s);
 	if(mtx->length <= offset)
 		return NULL;
-	mock_span*new_span = malloc(sizeof(mock_span));	
+	mock_span *new_span = malloc(sizeof(mock_span));	
 	new_span->super.start = offset;
-	new_span->super.end = offset + 1;
+	new_span->super.end = offset;
 	new_span->start = find_offset(mtx->file, offset);
-	new_span->end = new_span->start + utf8_size(utf8_next(new_span->start));
-	return &new_span->super;
+	new_span->end = new_span->start;
+	new_span->super.s = s;
+	//new_span->end = new_span->start + utf8_size(utf8_next(new_span->start));
+	return &(new_span->super);
 }
 
 void mtx_put_span(span *old_span)
 {
 	free(GET_SPAN(old_span));	
+}
+
+utf8 mtx_peek_span(span *sp)
+{	
+	mock_span *span = GET_SPAN(sp);
+	return utf8_next(span->end);
 }
 
 int mtx_grow_span(span *sp)
@@ -84,7 +94,19 @@ int mtx_grow_span(span *sp)
 	if(sp->end >= mtx->length)
 		return -1;
 	sp->end++;			
+	mock_span *span = GET_SPAN(sp);
+	span->end += utf8_size(utf8_next(span->end));
 	return 0;
+}
+
+// make this more efficient
+utf8 mtx_index_span(span *sp, int index)
+{
+	mock_span *span = GET_SPAN(sp);
+	assert(index >= 0);
+	assert(index < (sp->end - sp->start));
+	char *offset = find_offset(span->start, index);
+	return utf8_next(offset);	
 }
 
 struct stext *make_mock_text(struct mock_text *mtx)
@@ -95,6 +117,9 @@ struct stext *make_mock_text(struct mock_text *mtx)
 	mtx->super.load_file = mtx_load_file;
 	mtx->super.get_span = mtx_get_span;
 	mtx->super.put_span = mtx_put_span;
+	mtx->super.index_span = mtx_index_span;
+	mtx->super.peek_span = mtx_peek_span;
+	mtx->super.grow_span = mtx_grow_span;
 	mtx->fd = -1;
 	return &mtx->super;
 }

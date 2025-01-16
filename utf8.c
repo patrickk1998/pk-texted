@@ -3,7 +3,7 @@
 
 
 
-int get_length_byte(unsigned char byte)
+static int get_length_byte(unsigned char byte)
 {
 	if(byte <= 0x7f)
 		return 1; // ASCII character. 

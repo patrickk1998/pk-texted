@@ -5,6 +5,8 @@
 #include "input.h"
 #include "display.h"
 #include "text.h"
+#include "span.h"
+
 
 int main(int argc, char* argv[])
 {
@@ -39,21 +41,18 @@ int main(int argc, char* argv[])
 	dis->open_display(dis, &w, &h);	
 
 	/* Open File */
-	struct basic_text bxt;
-	struct text *xt = make_basic_text(&bxt);
+	struct mock_text mxt;
+	struct stext *xt = make_mock_text(&mxt);
 	int fd;
 	if((fd = open(file_name, O_RDWR , 0666)) < 0){
 		perror("Problem with opening file");
 		return 1;
 	}		
 	xt->set_fd(xt, fd);
-	xt->set_row_width(xt, w);
 	xt->load_file(xt);
 
-	/* Make State */
-	struct displayState state;
-	make_state(&state, xt, h, w);
-	render_state(&state, dis);
+	/* Initalize the Display */
+	init_display(xt, dis, h, w);
 
 	struct input_action action;
 	while(1){
@@ -61,13 +60,13 @@ int main(int argc, char* argv[])
 		if(action.type == quit){
 			break;
 		}
+		/*
 		if(action.type != noop)
 			update_state(&state, &action);
 		render_state(&state, dis);
+		*/
 	}
 	
 	dis->close_display(dis);
-	printf("cursor %d\n", state.cursorRow);
-	printf("total lines %d\n", xt->get_total_lines(xt));
 	return 0;
 }

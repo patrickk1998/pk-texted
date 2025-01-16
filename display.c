@@ -223,6 +223,37 @@ static void tty_put_line(struct display *super, const codepoint *line, int row)
 	return;
 }
 
+static void tty_put_str(struct display *super, const display_str *str, int row)
+{
+	struct tty_display *ttyd = (struct tty_display *)((char *)super - offsetof(struct tty_display, super));	
+	char *rowbuf = get_row_buffer(ttyd, row);
+	memset(rowbuf, 0, ROW_FACTOR*ttyd->width);
+	int j = 0; //byte index into row buffer
+	codepoint *line = str->codepoints;
+	// assume that each each codepoints takes up 1 column <- not true in the general case, but for simplicty.
+	for(int i = 0; i < ttyd->width; i++){	
+		if(ttyd->current_text_color != line[i].text_color){
+			if(line[i].text_color == color_default){
+				j += put_rowbuf(rowbuf + j, "\e[39m");
+			} else {
+				char temp[32];
+				sprintf(temp, "\e[38;5;%dm", ((int)line[i].text_color - 1));
+				j += put_rowbuf(rowbuf + j, temp);
+			}
+			ttyd->current_text_color = line[i].text_color;
+		}
+		
+		j += put_next_codepoint(rowbuf + j, &line[i]);
+
+		// check if this is the last codepoint
+		if(i == (str->num - 1)){
+			ttyd->line_len[row] = j;
+			break;
+		}
+	}
+	return;
+}
+
 static void tty_display_line(struct display *super, int row)
 {
 	struct tty_display *ttyd = (struct tty_display *)((char *)super - offsetof(struct tty_display, super));	
@@ -260,6 +291,7 @@ struct display *make_tty_display(struct tty_display *ttyd)
 	ttyd->super.close_display = tty_close_display;
 	ttyd->super.set_cursor = tty_set_cursor;
 	ttyd->super.put_line = tty_put_line;
+	ttyd->super.put_str = tty_put_str;
 	ttyd->super.display_line = tty_display_line;
 	ttyd->super.get_size = tty_get_size;
 	ttyd->super.clear_display = tty_clear_display;

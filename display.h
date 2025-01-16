@@ -19,6 +19,7 @@ struct display{
 	int  (*open_display)(struct display *, int *, int *);
 	void (*close_display)(struct display *);
 	void (*put_line)(struct display *, const codepoint *, int);
+	void (*put_str)(struct display *, const display_str *, int);
 	void (*display_line)(struct display*, int);
 	void (*set_cursor)(struct display *, int, int);
 	void (*get_size)(struct display *, int *, int *);

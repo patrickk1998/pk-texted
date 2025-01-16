@@ -1,6 +1,8 @@
 #ifndef CODEPOINT_H
 #define CODEPOINT_H
 
+#include "utf8.h"
+
 /*
  *  A codepoint represents not just a utf8 unicode character, but
  *  Someing that is being displayed on screen, hence is must have 
@@ -41,9 +43,18 @@ struct _codepoint{
 
 typedef struct _codepoint codepoint;
 
+struct _display_str{
+	codepoint *codepoints;
+	int num;
+};
+
+typedef struct _display_str display_str;
+
 int get_next_codepoint(const char *, codepoint *);
 
 int put_next_codepoint(char *, const codepoint *);
+
+void codepoint_from_uchar(codepoint *, utf8);
 
 int get_length(codepoint *);
 
