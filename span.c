@@ -5,7 +5,7 @@
 #include <assert.h>
 #include "span.h"
 
-int find_length(char *file)
+static int find_length(char *file)
 {
 	int i = -1; //size does not include ending null character.
 	utf8 uchar;
@@ -17,7 +17,7 @@ int find_length(char *file)
 	return i;
 }
 
-char *find_offset(char *file, int index)
+static char *find_offset(char *file, int index)
 {
 	int i = 0;
 	utf8 uchar;
@@ -32,18 +32,18 @@ char *find_offset(char *file, int index)
 #define GET_MOCK(s) (struct mock_text*)((char *)s - offsetof(struct mock_text, super));
 #define	GET_SPAN(s) (mock_span*)((char *)s - offsetof(mock_span, super))
 
-void mtx_set_fd(struct stext *s, int fd)
+static void mtx_set_fd(struct stext *s, int fd)
 {
 	struct mock_text *mtx = GET_MOCK(s);
 	mtx->fd = fd;
 }
 
-void mtx_nop(struct stext *s)
+static void mtx_nop(struct stext *s)
 {
 	return;
 }
 
-void mtx_load_file(struct stext *s)
+static void mtx_load_file(struct stext *s)
 {
 	struct mock_text *mtx = GET_MOCK(s);
 	struct stat stat;	
@@ -62,7 +62,7 @@ void mtx_load_file(struct stext *s)
 }
 
 // span starts offempty, with end == start
-span *mtx_get_span(struct stext *s, int offset)
+static span *mtx_get_span(struct stext *s, int offset)
 {
 	struct mock_text *mtx = GET_MOCK(s);
 	if(mtx->length <= offset)
@@ -77,18 +77,18 @@ span *mtx_get_span(struct stext *s, int offset)
 	return &(new_span->super);
 }
 
-void mtx_put_span(span *old_span)
+static void mtx_put_span(span *old_span)
 {
 	free(GET_SPAN(old_span));	
 }
 
-utf8 mtx_peek_span(span *sp)
+static utf8 mtx_peek_span(span *sp)
 {	
 	mock_span *span = GET_SPAN(sp);
 	return utf8_next(span->end);
 }
 
-int mtx_grow_span(span *sp)
+static int mtx_grow_span(span *sp)
 {
 	struct mock_text *mtx = GET_MOCK(sp->s);	
 	if(sp->end >= mtx->length)
@@ -100,7 +100,7 @@ int mtx_grow_span(span *sp)
 }
 
 // make this more efficient
-utf8 mtx_index_span(span *sp, int index)
+static utf8 mtx_index_span(span *sp, int index)
 {
 	mock_span *span = GET_SPAN(sp);
 	assert(index >= 0);

@@ -41,6 +41,12 @@ utf8 utf8_next(char *stream)
 	return uchar;
 }
 
+utf8 utf8_from_char(char c){
+	utf8 uchar;
+	uchar.x[0] = c;
+	return uchar;
+}
+
 int utf8_compare(utf8 uchar, char c)
 {
 	return uchar.x[0] == c;

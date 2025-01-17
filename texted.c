@@ -13,12 +13,16 @@
 #include "text.h"
 #include "span.h"
 
+#define MIN(a,b) (a < b) ? a : b
+
 /* New span stuff implemented here */
 
+/* Initialises the display */
 void init_display(struct stext *xt, struct display *dis, int h, int w)
 {	
 	xt->lock(xt);
 	
+	int tab_width = 4;
 
 	// first we get the spans for each row
 	span **spans = malloc(sizeof(span *)*h);				
@@ -34,7 +38,13 @@ void init_display(struct stext *xt, struct display *dis, int h, int w)
 			if(utf8_compare(uchar, '\n')){
 				offset++;
 				break;
-			}
+			}	
+
+			// When a line wraps to a new span, there can never be a space at
+			// the begining due to tab expansion (unlike in vim) this simplifes things a bit.
+			if(utf8_compare(uchar, '\t'))
+				col = MIN(w, (col + tab_width - (col % tab_width))); 
+
 			xt->grow_span(spans[row]);
 			offset++;
 		}		
@@ -47,12 +57,25 @@ void init_display(struct stext *xt, struct display *dis, int h, int w)
 	for(int row = 0; row < h; row++){
 		if(spans[row] == NULL)
 			break;
-		for(int col = 0; col < w; col++){
+		int index = 0;
+		for(int col = 0; col < w;){
 			if(col == (spans[row]->end - spans[row]->start))
 				break;
-			utf8 uchar = xt->index_span(spans[row], col);		
+			utf8 uchar = xt->index_span(spans[row], index);		
+			
+			// to do tab expansion or not
+			if(utf8_compare(uchar, '\t')){
+				int l = MIN(w - col, tab_width - (col % tab_width)); 
+				for(int i = 0; i < l; i++){
+					codepoint_from_uchar(&str.codepoints[col], utf8_from_char(' '));
+					col++;
+				}
+			} else {
+				codepoint_from_uchar(&str.codepoints[col], uchar);
+				col++;
+			}
 			str.num = col + 1;
-			codepoint_from_uchar(&str.codepoints[col], uchar);
+			index++;
 		}
 		// check if span is empty
 		if(spans[row]->end - spans[row]->start == 0)

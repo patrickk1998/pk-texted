@@ -41,51 +41,30 @@ struct _command{
 
 typedef struct _command command;
 
-struct _rowmap{
-	line_id line;
-	int index;
-	int width;
-	int changed;
-	// char* text stores tab subsituted text ready to put into the display.
-	char *text;  
-};
-
 typedef struct _rowmap _rowmap;
 
 // The displayed text area is [start, end) 
-struct displayState{
-	int cursorRow;
-	int cursorCharacter;
-	int savedCursorCharacter;
-	int csaved;
-	int cursorColumn;
-	int endRow;
-	char *changed;
-	struct text *xt;
-	int rows;
-	int width;
-	int viewRows; // Bottom row is command line, so viewRows = rows - 1;
-	int lowestView; // Lowest row where text is displayed.
-	line_id start;
-	line_id end;
+struct dstate{
+	struct {
+		int height;
+		int width;
+	} size;
+	struct {
+		int row;
+		int offset; // unicode character offset into row
+	} cursor;
 	enum _mode mode;
-	int changed_control;
-	struct _rowmap *row_mapping;	
-	_rowmap candidate_rowmap;
-	enum {
-		scrolled_no,
-		scrolled_up,
-		scrolled_down,
-	} scrolled;
 };
 
 // event loop, read from input and update data; return after that.
 
+/*
 void make_state(struct displayState *s, struct text *xt,  int h, int w);
 
 void update_state(struct displayState *s, struct input_action *a);
 
 void render_state(struct displayState *s, struct display *dis);
+*/
 
 
 /* new span things */
