@@ -43,7 +43,6 @@ typedef struct _command command;
 
 typedef struct _rowmap _rowmap;
 
-// The displayed text area is [start, end) 
 struct dstate{
 	struct {
 		int height;
@@ -54,6 +53,7 @@ struct dstate{
 		int offset; // unicode character offset into row
 	} cursor;
 	enum _mode mode;
+	span **spans;
 };
 
 // event loop, read from input and update data; return after that.
@@ -69,7 +69,9 @@ void render_state(struct displayState *s, struct display *dis);
 
 /* new span things */
 
-void init_display(struct stext *, struct display *, int h, int w);
+void init_display(struct stext *, struct display *, struct dstate *);
+
+void update_display(struct stext *, struct display *);
 
 #endif /* TEXTED_H */
 

@@ -52,7 +52,10 @@ int main(int argc, char* argv[])
 	xt->load_file(xt);
 
 	/* Initalize the Display */
-	init_display(xt, dis, h, w);
+	struct dstate state;
+	state.size.height = h;
+	state.size.width = w;
+	init_display(xt, dis, &state);
 
 	struct input_action action;
 	while(1){

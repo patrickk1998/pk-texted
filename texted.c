@@ -18,14 +18,16 @@
 /* New span stuff implemented here */
 
 /* Initialises the display */
-void init_display(struct stext *xt, struct display *dis, int h, int w)
+void init_display(struct stext *xt, struct display *dis, struct dstate *state)
 {	
 	xt->lock(xt);
 	
 	int tab_width = 4;
+	int h = state->size.height;
+	int w = state->size.width;
 
 	// first we get the spans for each row
-	span **spans = malloc(sizeof(span *)*h);				
+	span **spans = malloc(sizeof(span *)*h);
 	int offset = 0; // utf8 offset
 	for(int row = 0; row < h; row++){
 		spans[row] = xt->get_span(xt, offset);
@@ -85,6 +87,13 @@ void init_display(struct stext *xt, struct display *dis, int h, int w)
 	}
 	free(str.codepoints);
 
+	dstate->spans = spans;
+
 	xt->unlock(xt);
 }
 
+void update_display()
+{
+
+
+}
