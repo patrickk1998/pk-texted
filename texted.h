@@ -41,7 +41,6 @@ struct _command{
 
 typedef struct _command command;
 
-typedef struct _rowmap _rowmap;
 
 struct dstate{
 	struct {

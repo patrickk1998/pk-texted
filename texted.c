@@ -17,6 +17,29 @@
 
 /* New span stuff implemented here */
 
+/* 
+ * Spans Are **Special**:
+ * 
+ * * Contigous range; no \n to exclude.
+ *
+ * * Must wrap around, meaning that a character (\t) 
+ *   can occupy multiple rows.
+ * 
+ * * Editing a span change all the rows that belong to it.
+ * 
+ * * Cursor must wrap around with it, meaning that a span and (utf8 char) 
+ *   offset are a natural choice for cursor cordinates.
+ */
+
+// The key here is that a span **must** takeup
+// a contiguous range of text. Also always starts at a new line.
+// Assume for now that each column is one utf8 char
+struct span_buf{
+	utf8 *v;
+	int size; // number of 
+};
+
+
 /* Initialises the display */
 void init_display(struct stext *xt, struct display *dis, struct dstate *state)
 {	
@@ -26,36 +49,69 @@ void init_display(struct stext *xt, struct display *dis, struct dstate *state)
 	int h = state->size.height;
 	int w = state->size.width;
 
-	// first we get the spans for each row
+	//first we get the buffers
 	span **spans = malloc(sizeof(span *)*h);
+	struct span_buf *bvec = malloc(sizeof(struct span_buf)*h);
 	int offset = 0; // utf8 offset
-	for(int row = 0; row < h; row++){
-		spans[row] = xt->get_span(xt, offset);
-		if(spans[row] == NULL)
+	int total_spans = 0;
+	int total_size = 0;
+	int tmp = 0;
+	for(int i = 0; i < h; i++){
+		if(total_size >= h*w)
 			break;
-		for(int col = 0; col < w; col++){
-			utf8 uchar = xt->peek_span(spans[row]);		
+		spans[i] = xt->get_span(xt, offset);
+		if(spans[i] == NULL)
+			break;
+		bvec[i].v = malloc(sizeof(utf8)*h*w);
+		total_spans++;
+		for(int j = 0; j < h*w; j++){
+			utf8 uchar = xt->peek_span(spans[i]);		
 			if(utf8_empty(uchar))
 				break;
 			if(utf8_compare(uchar, '\n')){
 				offset++;
 				break;
 			}	
-
-			// When a line wraps to a new span, there can never be a space at
-			// the begining due to tab expansion (unlike in vim) this simplifes things a bit.
-			if(utf8_compare(uchar, '\t'))
-				col = MIN(w, (col + tab_width - (col % tab_width))); 
-
-			xt->grow_span(spans[row]);
+			if(utf8_compare(uchar, '\t')){
+				int t = j + tab_width - (j % tab_width);
+				for(; j < t; j++)
+					bvec[i].v[j] = utf8_from_char(' ');	
+				goto grow;
+			}
+			bvec[i].v[j] = uchar;	
+grow:
+			xt->grow_span(spans[i]);
 			offset++;
+			tmp = j;
 		}		
+		bvec[i].size = tmp;
+		total_size += (tmp + w - tmp % w); // round up to nearest w multiple	
+		tmp = 0;
 	}
-
-
-	// Then we convert the spans into code points;
+		
 	display_str str;
 	str.codepoints = malloc(sizeof(codepoint) * w);
+	int row = 0;
+	int col = 0;
+	for(int i = 0; i < total_spans; i++){
+		for(int j = 0; j < bvec[i].size; j++){
+			if(col == w){
+				str.num = col;
+				dis->put_str(dis, &str, row);	
+				dis->display_line(dis, row);
+				row++;
+				col = 0;
+			}
+			codepoint_from_uchar(&str.codepoints[col], bvec[i].v[j]);
+			col++;		
+		}
+		str.num = col;
+		dis->put_str(dis, &str, row);	
+		dis->display_line(dis, row);
+		row++;
+		col = 0;
+	}
+/*
 	for(int row = 0; row < h; row++){
 		if(spans[row] == NULL)
 			break;
@@ -86,14 +142,16 @@ void init_display(struct stext *xt, struct display *dis, struct dstate *state)
 		dis->display_line(dis, row);
 	}
 	free(str.codepoints);
-
-	dstate->spans = spans;
+*/
+	state->spans = spans;
 
 	xt->unlock(xt);
 }
 
-void update_display()
+/*
+void update_display(struct stext *xt, struct display *dis, struct dstate *state, )
 {
 
 
 }
+*/
