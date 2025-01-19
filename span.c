@@ -91,8 +91,7 @@ static utf8 mtx_peek_span(span *sp)
 static int mtx_grow_span(span *sp)
 {
 	struct mock_text *mtx = GET_MOCK(sp->s);	
-	if(sp->end >= mtx->length)
-		return -1;
+	assert(sp->end < mtx->length);
 	sp->end++;			
 	mock_span *span = GET_SPAN(sp);
 	span->end += utf8_size(utf8_next(span->end));

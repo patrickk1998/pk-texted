@@ -1,5 +1,5 @@
 CC=cc
-CFLAGS= -Wall -g
+CFLAGS= -Wall -fsanitize=address -g
 
 texted: texted.o main.o display.o text.o input.o span.o utf8.o codepoint.o
 	$(CC) $(CFLAGS) -o texted texted.o main.o display.o text.o input.o span.o utf8.o codepoint.o

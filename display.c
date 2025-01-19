@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include "display.h"
+#include <assert.h>
 
 #define GET_TTYD(super) (struct tty_display *)((char *)super - offsetof(struct tty_display, super));	
 #define ROW_FACTOR 32
@@ -98,6 +99,7 @@ static void enable_raw(struct termios *termset_orig, int fd)
 
 static char *get_row_buffer(struct tty_display *ttyd, int row)
 {
+	assert(row < ttyd->height);
 	return ttyd->buffer + ROW_FACTOR*row * ttyd->width;
 }
 
@@ -247,7 +249,7 @@ static void tty_put_str(struct display *super, const display_str *str, int row)
 
 		// check if this is the last codepoint
 		if(i == (str->num - 1)){
-			ttyd->line_len[row] = j;
+			ttyd->line_len[row] = j+1;
 			break;
 		}
 	}

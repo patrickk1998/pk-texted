@@ -6,6 +6,26 @@
 #include "display.h"
 #include "text.h"
 #include "span.h"
+#include <assert.h>
+
+struct my_event{
+	struct stext *xt;
+	struct dstate *state;
+	struct resize_event super;	
+};
+
+#define GET_EVENT(s) (struct my_event*)((char *)s - offsetof(struct my_event, super))
+
+void my_resize_handler(struct resize_event *event)
+{
+	struct my_event *my_event = GET_EVENT(event);
+	int h;
+	int w;
+	event->dis->get_size(event->dis, &w, &h);
+	my_event->state->size.height = h;
+	my_event->state->size.width = w;
+	init_display(my_event->xt, event->dis, my_event->state);
+}
 
 
 int main(int argc, char* argv[])
@@ -38,21 +58,29 @@ int main(int argc, char* argv[])
 	//int w, h;
 	int w = 0;
 	int h = 0;
-	dis->open_display(dis, &w, &h);	
+//	struct resize_event my_resize_callback = { .dis = dis, .resize = my_resize_handler};
+//	dis->resize_callback = &my_resize_callback;
 
 	/* Open File */
+	struct dstate state;
 	struct mock_text mxt;
 	struct stext *xt = make_mock_text(&mxt);
+
+	struct my_event my_event = { .xt = xt, .state = &state, 
+	.super = { .dis = dis, .resize = my_resize_handler}};
+	dis->resize_callback = &my_event.super;
+
+	dis->open_display(dis, &w, &h);	
+
 	int fd;
 	if((fd = open(file_name, O_RDWR , 0666)) < 0){
-		perror("Problem with opening file");
+		perror("Problem with opening text file");
 		return 1;
 	}		
 	xt->set_fd(xt, fd);
 	xt->load_file(xt);
 
 	/* Initalize the Display */
-	struct dstate state;
 	state.size.height = h;
 	state.size.width = w;
 	init_display(xt, dis, &state);

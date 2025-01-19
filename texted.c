@@ -39,6 +39,13 @@ struct span_buf{
 	int size; // number of 
 };
 
+void print_spanbuf(struct span_buf *b){
+	write(2, "span: ", 6);
+	for(int i = 0; i < b->size; i++){
+		write(2, b->v[i].x, utf8_size(b->v[i])); 
+	}
+	write(2, "\n", 1);
+}
 
 /* Initialises the display */
 void init_display(struct stext *xt, struct display *dis, struct dstate *state)
@@ -49,6 +56,7 @@ void init_display(struct stext *xt, struct display *dis, struct dstate *state)
 	int h = state->size.height;
 	int w = state->size.width;
 
+//
 	//first we get the buffers
 	span **spans = malloc(sizeof(span *)*h);
 	struct span_buf *bvec = malloc(sizeof(struct span_buf)*h);
@@ -56,15 +64,19 @@ void init_display(struct stext *xt, struct display *dis, struct dstate *state)
 	int total_spans = 0;
 	int total_size = 0;
 	int tmp = 0;
-	for(int i = 0; i < h; i++){
+	for(int i = 0; i < h; i++){		
 		if(total_size >= h*w)
-			break;
+				break;
 		spans[i] = xt->get_span(xt, offset);
 		if(spans[i] == NULL)
 			break;
 		bvec[i].v = malloc(sizeof(utf8)*h*w);
 		total_spans++;
 		for(int j = 0; j < h*w; j++){
+			if(total_size + j >= h*w){
+				total_size += j;
+				break; // jumps to if-statement that will break outer loop, avoids using goto.
+			}
 			utf8 uchar = xt->peek_span(spans[i]);		
 			if(utf8_empty(uchar))
 				break;
@@ -73,9 +85,10 @@ void init_display(struct stext *xt, struct display *dis, struct dstate *state)
 				break;
 			}	
 			if(utf8_compare(uchar, '\t')){
-				int t = j + tab_width - (j % tab_width);
-				for(; j < t; j++)
+				int t = j + tab_width - ((j+1) % tab_width);
+				for(; j < t && j < h*w; j++)
 					bvec[i].v[j] = utf8_from_char(' ');	
+				j--; // otherwise j will be double incremented by the two for-loops.
 				goto grow;
 			}
 			bvec[i].v[j] = uchar;	
@@ -84,16 +97,18 @@ grow:
 			offset++;
 			tmp = j;
 		}		
-		bvec[i].size = tmp;
+		bvec[i].size = tmp + 1;
 		total_size += (tmp + w - tmp % w); // round up to nearest w multiple	
 		tmp = 0;
 	}
 		
+
 	display_str str;
 	str.codepoints = malloc(sizeof(codepoint) * w);
 	int row = 0;
 	int col = 0;
 	for(int i = 0; i < total_spans; i++){
+		//print_spanbuf(&bvec[i]);
 		for(int j = 0; j < bvec[i].size; j++){
 			if(col == w){
 				str.num = col;
@@ -111,6 +126,7 @@ grow:
 		row++;
 		col = 0;
 	}
+
 /*
 	for(int row = 0; row < h; row++){
 		if(spans[row] == NULL)
