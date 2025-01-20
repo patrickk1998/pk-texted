@@ -10,8 +10,7 @@
 #include <string.h>
 #include "texted.h"
 #include "display.h"
-#include "text.h"
-#include "span.h"
+#include "../backend/span.h"
 
 #define MIN(a,b) (a < b) ? a : b
 

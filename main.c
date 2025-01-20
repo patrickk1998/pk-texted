@@ -1,11 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#include "texted.h"
-#include "input.h"
-#include "display.h"
-#include "text.h"
-#include "span.h"
+#include "frontend/texted.h"
+#include "frontend/input.h"
+#include "frontend/display.h"
+#include "backend/span.h"
 #include <assert.h>
 
 struct my_event{

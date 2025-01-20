@@ -1,56 +1,28 @@
+F=frontend
+B=backend
+T=tests
+
 CC=cc
 CFLAGS= -Wall -fsanitize=address -g
 
-texted: texted.o main.o display.o text.o input.o span.o utf8.o codepoint.o
-	$(CC) $(CFLAGS) -o texted texted.o main.o display.o text.o input.o span.o utf8.o codepoint.o
+all: texted tests
 
-texted.o: texted.c texted.h display.h
-	$(CC) $(CFLAGS) -c texted.c
+OBJS = $F/texted.o main.o $F/display.o $F/input.o $B/span.o $F/codepoint.o utf8.o
 
-main.o: main.c texted.h display.h
-	$(CC) $(CFLAGS) -c main.c
+texted: $(OBJS) 
+	$(CC) $(CFLAGS) -o texted $(OBJS)
 
-tty_test: tty_display_test.o display.o codepoint.o
-	$(CC) $(CFLAGS) -o tty_test tty_display_test.o display.o codepoint.o
+tests: tty_test input_test codepoint_test
 
-tty_display_test.o: tty_display_test.c display.h codepoint.h
-	$(CC) $(CFLAGS) -c tty_display_test.c
+tty_test: $T/tty_display_test.o $F/display.o $F/codepoint.o utf8.o
+	$(CC) $(CFLAGS) -o tty_test $T/tty_display_test.o $F/display.o $F/codepoint.o utf8.o
 
-input_test: input_test.o input.o
-	$(CC) $(CFLAGS) -o input_test input_test.o input.o
 
-input_test.o: input_test.c input.h
-	$(CC) $(CFLAGS) -c input_test.c
+input_test: $T/input_test.o $F/input.o
+	$(CC) $(CFLAGS) -o input_test $T/input_test.o $F/input.o
 
-display.o: display.c display.h codepoint.h
-	$(CC) $(CFLAGS) -c display.c
-
-input.o: input.c input.h
-	$(CC) $(CFLAGS) -c input.c
-
-text_test: text_test.o text.o
-	$(CC) $(CFLAGS) -o text_test text_test.o text.o
-
-text_test.o: text_test.c text.h
-	$(CC) $(CFLAGS) -c text_test.c
-
-text.o: text.c text.h
-	$(CC) $(CFLAGS) -c text.c
-
-codepoint_test: codepoint.o codepoint_test.o
-	$(CC) $(CFLAGS) -o codepoint_test codepoint.o codepoint_test.o
-
-codepoint_test.o: codepoint_test.c codepoint.h
-	$(CC) $(CFLAGS) -c codepoint_test.c
-
-codepoint.o: codepoint.c codepoint.h
-	$(CC) $(CFLAGS) -c codepoint.c
-
-utf8.o: utf8.c utf8.h
-	$(CC) $(CFLAGS) -c utf8.c
-
-span.o: span.c span.h
-	$(CC) $(CFLAGS) -c span.c
+codepoint_test: $T/codepoint_test.o $F/codepoint.o utf8.o
+	$(CC) $(CFLAGS) -o codepoint_test $T/codepoint_test.o $F/codepoint.o utf8.o
 
 clean:
-	rm *.o
+	rm *.o $F/*.o $B/*.o $T/*.o 

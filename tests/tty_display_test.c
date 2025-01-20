@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <string.h>
-#include "display.h"
-#include "codepoint.h"
+#include "../frontend/display.h"
+#include "../frontend/codepoint.h"
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdarg.h>

@@ -1,5 +1,5 @@
-#include "texted.h"
-#include "input.h"
+#include "../frontend/texted.h"
+#include "../frontend/input.h"
 #include <unistd.h>
 #include <stdio.h>
 
@@ -100,7 +100,7 @@ int main()
 	for(int i = 0; i < TEST_QUEUE_MAX_LEN && i< tq_len; i++){
 		printf("test: %d\n", i + 1);
 		write_action(p[1], test_queue + i);	
-		get_action(&b);
+		get_action(&b, STDIN_FILENO);
 		if(!is_same_action(&b, test_queue + i)){
 			printf("FAILED TEST\n");
 			return 1;	

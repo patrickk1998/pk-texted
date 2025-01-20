@@ -1,4 +1,4 @@
-#include "codepoint.h"
+#include "../frontend/codepoint.h"
 #include <stdio.h>
 #include <string.h>
 

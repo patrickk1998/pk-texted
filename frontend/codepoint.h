@@ -1,7 +1,7 @@
 #ifndef CODEPOINT_H
 #define CODEPOINT_H
 
-#include "utf8.h"
+#include "../utf8.h"
 
 /*
  *  A codepoint represents not just a utf8 unicode character, but

@@ -1,4 +1,4 @@
-#include "utf8.h"
+#include "../utf8.h"
 
 /* stext interface */
 #ifndef SPAN_H

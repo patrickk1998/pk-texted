@@ -2,8 +2,7 @@
 #include <unistd.h>
 #include "display.h"
 #include "input.h"
-#include "text.h"
-#include "span.h"
+#include "../backend/span.h"
 
 #ifndef TEXTED_H
 #define TEXTED_H
