@@ -29,7 +29,7 @@ void my_resize_handler(struct resize_event *event)
 
 int main(int argc, char* argv[])
 {
-	char default_file_name[] = "text/example1";
+	char default_file_name[] = "example/example1";
 	char *file_name;
 	char *tty_name = "\0";
 	if(argc < 2)
@@ -69,13 +69,13 @@ int main(int argc, char* argv[])
 	.super = { .dis = dis, .resize = my_resize_handler}};
 	dis->resize_callback = &my_event.super;
 
-	dis->open_display(dis, &w, &h);	
-
 	int fd;
 	if((fd = open(file_name, O_RDWR , 0666)) < 0){
 		perror("Problem with opening text file");
 		return 1;
 	}		
+
+	dis->open_display(dis, &w, &h);	
 	xt->set_fd(xt, fd);
 	xt->load_file(xt);
 
