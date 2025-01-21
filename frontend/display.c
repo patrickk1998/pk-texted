@@ -174,6 +174,7 @@ static void tty_close_display(struct display *super)
 	struct tty_display *ttyd = (struct tty_display *)((char *)super - offsetof(struct tty_display, super));	
 	super->set_scroll_window(super, ttyd->scrollwin_og[0], ttyd->scrollwin_og[1]); 
 	free(ttyd->buffer);
+	free(ttyd->line_len);
 	disable_raw(&ttyd->termset_orig, ttyd->fd);
 	disable_alt_buffer(ttyd->fd);
 }
