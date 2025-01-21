@@ -11,6 +11,14 @@
 
 #define RENDER_QUEUE_SIZE 3
 
+// memory leaks do no really matter here, but LeakSanitizer will complain.
+void put_line(struct display *dis, char *str, int row)
+{
+	codepoint *text = stocp(str);
+	dis->put_line(dis, text, row);
+	free(text);
+}
+
 void (*render_queue[RENDER_QUEUE_SIZE])(struct display *);
 
 void render_scenes(struct display * dis)
@@ -39,30 +47,30 @@ void pausefor(int seconds)
 
 void Hello_World(struct display *dis)
 {
-	dis->put_line(dis, stocp("Hello World🖖"), 0);
+	put_line(dis,  "Hello World🖖", 0);
 	dis->display_line(dis, 0);
-	dis->put_line(dis, stocp("This is just a test!"), 2);
+	put_line(dis, "This is just a test!", 2);
 	dis->display_line(dis, 2);		
 
 	int w, h;
 	dis->get_size(dis, &w, &h);
 	char cs[32];
 	sprintf(cs,"¶ columns: %d and rows: %d", w, h);
-	dis->put_line(dis, stocp(cs), 5);
+	put_line(dis, cs, 5);
 	dis->display_line(dis, 5);
 
 }
 
 void cursor_scene(struct display *dis)
 {
-	dis->put_line(dis, stocp("The cursor should be here->"), 3); 
+	put_line(dis, "The cursor should be here->", 3); 
 	dis->display_line(dis, 3); 
 	dis->set_cursor(dis, 3, 27);		
 }
 
 void goodbye_scene(struct display *dis)
 {
-	dis->put_line(dis, stocp("***Goodbye World***"), 0);
+	put_line(dis, "***Goodbye World***", 0);
 	dis->display_line(dis, 0);
 }
 
@@ -73,6 +81,7 @@ void color_scene(struct display *dis)
 		color_cyan, color_blue, color_purple, color_default);
 	dis->put_line(dis, row, 7);
 	dis->display_line(dis, 7);
+	free(row);
 }
 
 int main(int argc, char *argv[])
